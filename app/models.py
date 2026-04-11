@@ -1,10 +1,11 @@
 from typing import Optional
 import sqlalchemy as sa
 import sqlalchemy.orm as so
-from app import db
+from .extensions import db
 from flask_login import UserMixin
-from app import login
-from werkzeug.security import check_password_hash
+from .extensions import login
+from werkzeug.security import check_password_hash, generate_password_hash
+
 
 @login.user_loader
 def load_user(id):

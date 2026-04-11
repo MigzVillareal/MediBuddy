@@ -2,8 +2,7 @@ import os
 basedir = os.path.abspath(os.path.dirname(__file__))
 
 class Config:
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
-        'postgresql+psycopg2://postgres:hr@localhost:5432/medibuddy_db' 
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or "sqlite:///app.db"
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 

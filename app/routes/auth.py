@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from werkzeug.security import generate_password_hash
 from app.models import User
-from app import db
+from app.extensions import db
 from flask_login import login_user, login_required, logout_user, current_user
 import sqlalchemy as sa
 

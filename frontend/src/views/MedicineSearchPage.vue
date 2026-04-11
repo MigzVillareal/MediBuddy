@@ -23,9 +23,9 @@
       <div class="result-list">
         <div class="result-card" v-for="med in filteredMeds" :key="med.id" @click="selectMedicine(med)">
           <div>
-            <p class="result-card__name">{{ med.genericName }}</p>
-            <p class="result-card__brand">{{ med.brandName }}</p>
-            <span class="result-card__form">{{ med.dosageForm }}</span>
+            <p class="result-card__name">{{ med.generic_name }}</p>
+            <p class="result-card__brand">{{ med.brand_name }}</p>
+            <span class="result-card__form">{{ med.dosage_form }}</span>
           </div>
           <span class="result-card__arrow">›</span>
         </div>
@@ -59,54 +59,68 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
+import api from '@/api'
 
 const router = useRouter()
 
 const searchQuery = ref('')
 const selectedMed = ref(null)
-const formError   = ref('')
+const formError = ref('')
 const filteredMeds = ref([])
 
-// reactive() works like ref() but is better for objects with multiple fields
-const form = reactive({ dose: '', schedule: '', stock: '' })
+const form = reactive({
+  dose: '',
+  schedule: '',
+  stock: ''
+})
 
-// Placeholder list — later replace with FDA Philippines API call
-const allMedicines = [
-  { id: 1,  genericName: 'Amlodipine',  brandName: 'Norvasc',    dosageForm: 'Tablet'  },
-  { id: 2,  genericName: 'Metformin',   brandName: 'Glucophage', dosageForm: 'Tablet'  },
-  { id: 3,  genericName: 'Atorvastatin',brandName: 'Lipitor',    dosageForm: 'Tablet'  },
-  { id: 4,  genericName: 'Losartan',    brandName: 'Cozaar',     dosageForm: 'Tablet'  },
-  { id: 5,  genericName: 'Omeprazole',  brandName: 'Prilosec',   dosageForm: 'Capsule' },
-  { id: 6,  genericName: 'Paracetamol', brandName: 'Biogesic',   dosageForm: 'Tablet'  },
-  { id: 7,  genericName: 'Amoxicillin', brandName: 'Amoxil',     dosageForm: 'Capsule' },
-  { id: 8,  genericName: 'Cetirizine',  brandName: 'Zyrtec',     dosageForm: 'Tablet'  },
-  { id: 9,  genericName: 'Furosemide',  brandName: 'Lasix',      dosageForm: 'Tablet'  },
-  { id: 10, genericName: 'Aspirin',     brandName: 'Bayer',      dosageForm: 'Tablet'  },
-]
+let timeout = null
 
 function handleSearch() {
-  const q = searchQuery.value.toLowerCase().trim()
-  if (!q) { filteredMeds.value = []; return }
-  filteredMeds.value = allMedicines.filter(med =>
-    med.genericName.toLowerCase().includes(q) ||
-    med.brandName.toLowerCase().includes(q)
-  )
+  clearTimeout(timeout)
+
+  timeout = setTimeout(async () => {
+    const q = searchQuery.value.trim()
+
+    if (!q) {
+      filteredMeds.value = []
+      return
+    }
+
+    try {
+      api.get('/autocomplete', { params: { q } })
+      const data = await res.json()
+
+      // Option A: use backend keys directly (NO mapping)
+      filteredMeds.value = data
+
+    } catch (err) {
+      console.error("Search failed:", err)
+      filteredMeds.value = []
+    }
+  }, 200)
 }
 
 function selectMedicine(med) {
   selectedMed.value = med
-  form.dose = ''; form.schedule = ''; form.stock = ''
+
+  form.dose = ''
+  form.schedule = ''
+  form.stock = ''
+
   formError.value = ''
 }
 
 function confirmAdd() {
   formError.value = ''
+
   if (!form.dose || !form.schedule || !form.stock) {
     formError.value = 'Please fill in all fields.'
     return
   }
-  // Later: save to backend / shared store
-  alert(`${selectedMed.value.genericName} added!`)
+
+  alert(`${selectedMed.value.generic_name} added!`)
+
   selectedMed.value = null
   router.back()
 }

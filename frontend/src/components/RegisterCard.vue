@@ -37,6 +37,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import api from '@/api'
 
 const router = useRouter()
 
@@ -47,25 +48,38 @@ const showPassword    = ref(false)
 const showConfirm     = ref(false)
 const errorMessage    = ref('')
 
-function handleRegister() {
+async function handleRegister() {
   errorMessage.value = ''
 
   if (!username.value || !password.value || !confirmPassword.value) {
     errorMessage.value = 'Please fill in all fields.'
     return
   }
+
   if (password.value !== confirmPassword.value) {
     errorMessage.value = 'Passwords do not match.'
     return
   }
+
   if (password.value.length < 6) {
     errorMessage.value = 'Password must be at least 6 characters.'
     return
   }
 
-  // Later: call your backend API here
-  // On success, navigate to home:
-  router.push('/home')
+  try {
+    const res = await api.post('/auth/register', {
+      username: username.value,
+      password: password.value
+    })
+
+    console.log(res.data)
+
+    router.push('/login')
+
+  } catch (err) {
+    errorMessage.value =
+      err.response?.data?.error || 'Registration failed'
+  }
 }
 </script>
 

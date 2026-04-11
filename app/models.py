@@ -18,12 +18,6 @@ class User(UserMixin, db.Model):
     username: so.Mapped[str] = so.mapped_column(
         sa.String(36), index=True, unique=True
     )
-    first_name: so.Mapped[str] = so.mapped_column(
-        sa.String(64), nullable=False
-    )
-    last_name: so.Mapped[str] = so.mapped_column(
-        sa.String(64), nullable=False
-    )
     password_hash: so.Mapped[Optional[str]] = so.mapped_column(
         sa.String(256)
     )
@@ -38,34 +32,26 @@ class User(UserMixin, db.Model):
         return '<User {}>'.format(self.username)
     
 class Drug_Lookup(db.Model):
-    __tablename__ = "drugs"
+    __tablename__ = "drug_lookup"
 
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
 
-    brand_name: so.Mapped[Optional[str]] = so.mapped_column(
-        sa.String(120)
-    )
-    generic_name: so.Mapped[Optional[str]] = so.mapped_column(
-        sa.String(120)
-    )
-    dosage_form: so.Mapped[Optional[str]] = so.mapped_column(
-        sa.String(50)
-    )
+    brand_name: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))
+    generic_name: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))
+    dosage_form: so.Mapped[Optional[str]] = so.mapped_column(sa.String(50))
+
 
 class Drug_Stock(db.Model):
-    __tablename__ = "drugs"
+    __tablename__ = "drug_stock"
 
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
 
-    brand_name: so.Mapped[Optional[str]] = so.mapped_column(
-        sa.String(120)
+    drug_lookup_id: so.Mapped[int] = so.mapped_column(
+        sa.ForeignKey("drug_lookup.id")
     )
-    generic_name: so.Mapped[Optional[str]] = so.mapped_column(
-        sa.String(120)
-    )
-    dosage_form: so.Mapped[Optional[str]] = so.mapped_column(
-        sa.String(50)
-    )
-    quantity: so.Mapped[Optional[str]] = so.mapped_column(
-        sa.String(20)
-    )
+
+    brand_name: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))
+    generic_name: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))
+    dosage_form: so.Mapped[Optional[str]] = so.mapped_column(sa.String(50))
+
+    quantity: so.Mapped[int] = so.mapped_column(sa.Integer)

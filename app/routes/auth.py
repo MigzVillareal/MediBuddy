@@ -5,7 +5,7 @@ from app.extensions import db
 from flask_login import login_user, login_required, logout_user, current_user
 import sqlalchemy as sa
 
-auth_bp = Blueprint('auth', __name__)
+auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 
 @auth_bp.route('/register', methods=['POST'])
 def register():
@@ -20,10 +20,8 @@ def register():
     if User.query.filter_by(username=username).first():
         return jsonify({"error": "Username already exists"}), 400
 
-    user = User(
-        username=username,
-        password_hash=generate_password_hash(password)
-    )
+    user = User(username=username)
+    user.set_password(password)
 
     db.session.add(user)
     db.session.commit()
@@ -52,7 +50,7 @@ def login():
     return jsonify({
         "message": "Login successful",
         "user": {
-            "id": user.user_id,
+            "id": user.id,
             "username": user.username
         }
     }), 200

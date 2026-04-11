@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from app import db
-from app.models import Drug
+from app.models import Drug_Stock
 
 meds_bp = Blueprint('meds', __name__)
 
@@ -37,9 +37,9 @@ def add_drug():
     if not drug_name:
         return jsonify({"error": "Generic_Name is required"}), 400
 
-    drug = Drug_Lookup(
+    drug = Drug_Stock(
         brand_name=brand_name,
-        generic_name=generic name,
+        generic_name=generic_name,
         dosage_form=dosage_form,
         quantity=quantity,
     )

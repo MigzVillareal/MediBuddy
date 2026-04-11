@@ -29,17 +29,16 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import api from '@/api'
 
-// useRouter() gives us access to navigation (replaces this.$router)
 const router = useRouter()
 
-// ref() makes a variable reactive — the template updates when it changes
 const username     = ref('')
 const password     = ref('')
 const showPassword = ref(false)
 const errorMessage = ref('')
 
-function handleLogin() {
+async function handleLogin() {
   errorMessage.value = ''
 
   if (!username.value || !password.value) {
@@ -47,9 +46,20 @@ function handleLogin() {
     return
   }
 
-  // Later: call your backend API here
-  // On success, navigate to home:
-  router.push('/home')
+  try {
+    const res = await api.post('/auth/login', {
+      username: username.value,
+      password: password.value
+    })
+
+    console.log(res.data)
+
+    router.push('/home')
+
+  } catch (err) {
+    errorMessage.value =
+      err.response?.data?.error || 'Login failed'
+  }
 }
 </script>
 

@@ -6,7 +6,13 @@
     </header>
 
     <div class="search-wrap">
-      <input class="search-input" type="text" placeholder="Search medicine name..." v-model="searchQuery" @input="handleSearch" />
+      <input
+        class="search-input"
+        type="text"
+        placeholder="Search medicine name..."
+        v-model="searchQuery"
+        @input="handleSearch"
+      />
     </div>
 
     <div class="hint" v-if="!searchQuery">
@@ -15,13 +21,22 @@
     </div>
 
     <div class="results" v-if="searchQuery">
-      <p class="results-label" v-if="filteredMeds.length > 0">{{ filteredMeds.length }} result(s) found</p>
+      <p class="results-label" v-if="filteredMeds.length > 0">
+        {{ filteredMeds.length }} result(s) found
+      </p>
+
       <div class="hint" v-if="filteredMeds.length === 0">
         <span class="hint-icon">😕</span>
         <p>No medicine found for "<strong>{{ searchQuery }}</strong>"</p>
       </div>
+
       <div class="result-list">
-        <div class="result-card" v-for="med in filteredMeds" :key="med.id" @click="selectMedicine(med)">
+        <div
+          class="result-card"
+          v-for="med in filteredMeds"
+          :key="med.id"
+          @click="selectMedicine(med)"
+        >
           <div>
             <p class="result-card__name">{{ med.generic_name }}</p>
             <p class="result-card__brand">{{ med.brand_name }}</p>
@@ -34,23 +49,36 @@
 
     <div class="modal-overlay" v-if="selectedMed" @click.self="selectedMed = null">
       <div class="modal">
-        <h3 class="modal-title">{{ selectedMed.genericName }}</h3>
-        <p class="modal-sub">{{ selectedMed.brandName }} · {{ selectedMed.dosageForm }}</p>
+        <h3 class="modal-title">{{ selectedMed.generic_name }}</h3>
+
+        <p class="modal-sub">
+          {{ selectedMed.brand_name }} · {{ selectedMed.dosage_form }}
+        </p>
+
         <div class="field">
           <label class="label">Dose</label>
-          <input class="input" type="text" placeholder="e.g. 500mg" v-model="form.dose" />
+          <input class="input" v-model="form.dose" />
         </div>
+
         <div class="field">
           <label class="label">Schedule</label>
-          <input class="input" type="text" placeholder="e.g. Every 8 hours" v-model="form.schedule" />
+          <input class="input" v-model="form.schedule" />
         </div>
+
         <div class="field">
-          <label class="label">Stock (number of pills)</label>
-          <input class="input" type="number" placeholder="e.g. 30" v-model="form.stock" min="1" />
+          <label class="label">Stock</label>
+          <input class="input" type="number" v-model="form.stock" />
         </div>
+
         <p class="error" v-if="formError">{{ formError }}</p>
-        <button class="btn-primary" @click="confirmAdd">Add to My Medications</button>
-        <button class="btn-cancel" @click="selectedMed = null">Cancel</button>
+
+        <button class="btn-primary" @click="confirmAdd">
+          Add to My Medications
+        </button>
+
+        <button class="btn-cancel" @click="selectedMed = null">
+          Cancel
+        </button>
       </div>
     </div>
   </div>
@@ -65,8 +93,8 @@ const router = useRouter()
 
 const searchQuery = ref('')
 const selectedMed = ref(null)
-const formError = ref('')
 const filteredMeds = ref([])
+const formError = ref('')
 
 const form = reactive({
   dose: '',
@@ -88,14 +116,14 @@ function handleSearch() {
     }
 
     try {
-      api.get('/autocomplete', { params: { q } })
-      const data = await res.json()
+      const res = await api.get('/autocomplete', {
+        params: { q }
+      })
 
-      // Option A: use backend keys directly (NO mapping)
-      filteredMeds.value = data
+      filteredMeds.value = res.data
 
     } catch (err) {
-      console.error("Search failed:", err)
+      console.error('Search failed:', err)
       filteredMeds.value = []
     }
   }, 200)
@@ -112,15 +140,12 @@ function selectMedicine(med) {
 }
 
 function confirmAdd() {
-  formError.value = ''
-
   if (!form.dose || !form.schedule || !form.stock) {
     formError.value = 'Please fill in all fields.'
     return
   }
 
   alert(`${selectedMed.value.generic_name} added!`)
-
   selectedMed.value = null
   router.back()
 }

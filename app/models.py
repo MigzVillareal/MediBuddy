@@ -24,9 +24,6 @@ class User(UserMixin, db.Model):
     last_name: so.Mapped[str] = so.mapped_column(
         sa.String(64), nullable=False
     )
-    email: so.Mapped[str] = so.mapped_column(
-        sa.String(64), index=True, unique=True
-    )
     password_hash: so.Mapped[Optional[str]] = so.mapped_column(
         sa.String(256)
     )
@@ -40,14 +37,35 @@ class User(UserMixin, db.Model):
     def __repr__(self):
         return '<User {}>'.format(self.username)
     
-class Drug(db.Model):
+class Drug_Lookup(db.Model):
     __tablename__ = "drugs"
 
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
 
-    drug_name: so.Mapped[Optional[str]] = so.mapped_column(
+    brand_name: so.Mapped[Optional[str]] = so.mapped_column(
         sa.String(120)
     )
-    dosage_strength: so.Mapped[Optional[str]] = so.mapped_column(
+    generic_name: so.Mapped[Optional[str]] = so.mapped_column(
+        sa.String(120)
+    )
+    dosage_form: so.Mapped[Optional[str]] = so.mapped_column(
         sa.String(50)
+    )
+
+class Drug_Stock(db.Model):
+    __tablename__ = "drugs"
+
+    id: so.Mapped[int] = so.mapped_column(primary_key=True)
+
+    brand_name: so.Mapped[Optional[str]] = so.mapped_column(
+        sa.String(120)
+    )
+    generic_name: so.Mapped[Optional[str]] = so.mapped_column(
+        sa.String(120)
+    )
+    dosage_form: so.Mapped[Optional[str]] = so.mapped_column(
+        sa.String(50)
+    )
+    quantity: so.Mapped[Optional[str]] = so.mapped_column(
+        sa.String(20)
     )

@@ -29,15 +29,19 @@ def drug_search():
 def add_drug():
     data = request.get_json()
 
+    brand_name = (data.get("Brand_Name") or "").strip()
     generic_name = (data.get("Generic_Name") or "").strip()
-    dosage_strength = (data.get("Dosage_Strength") or "").strip()
+    dosage_form = (data.get("Dosage_Form") or "").strip()
+    quantity = (data.get("Quantity") or "").strip()
 
     if not drug_name:
         return jsonify({"error": "Generic_Name is required"}), 400
 
-    drug = Drug(
-        drug_name=drug_name,
-        dosage_strength=dosage_strength
+    drug = Drug_Lookup(
+        brand_name=brand_name,
+        generic_name=generic name,
+        dosage_form=dosage_form,
+        quantity=quantity,
     )
 
     db.session.add(drug)

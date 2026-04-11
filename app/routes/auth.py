@@ -12,21 +12,16 @@ def register():
     data = request.get_json()
 
     username = (data.get("username") or "").strip()
-    email = (data.get("email") or "").strip()
     password = data.get("password")
 
-    if not username or not email or not password:
+    if not username or not password:
         return jsonify({"error": "Missing fields"}), 400
 
     if User.query.filter_by(username=username).first():
         return jsonify({"error": "Username already exists"}), 400
 
-    if User.query.filter_by(email=email).first():
-        return jsonify({"error": "Email already exists"}), 400
-
     user = User(
         username=username,
-        email=email,
         password_hash=generate_password_hash(password)
     )
 
@@ -58,8 +53,7 @@ def login():
         "message": "Login successful",
         "user": {
             "id": user.user_id,
-            "username": user.username,
-            "email": user.email
+            "username": user.username
         }
     }), 200
 
@@ -68,12 +62,3 @@ def login():
 def logout():
     logout_user()
     return jsonify({"message": "Logged out"}), 200
-
-# @auth_bp.route('/me', methods=['GET'])
-# @login_required
-# def me():
-#     return jsonify({
-#         "id": current_user.user_id,
-#         "username": current_user.username,
-#         "email": current_user.email
-#     })

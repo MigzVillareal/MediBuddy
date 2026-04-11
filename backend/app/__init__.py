@@ -5,7 +5,7 @@ from flask_cors import CORS
 from flask_login import LoginManager
 
 from .config import Config
-from app.routes import api_bp
+from .routes import register_routes
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -16,8 +16,6 @@ migrate = Migrate(app, db)
 CORS(app)
 login = LoginManager(app)
 
-# register routes
-app.register_blueprint(api_bp, url_prefix='/api')
+register_routes(app)
 
-# load models and routes
 from . import models

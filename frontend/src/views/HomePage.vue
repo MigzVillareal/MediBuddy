@@ -43,7 +43,7 @@ const activeTab = ref('home')
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  max-width: 480px;
+  max-width: (100%, 480px);
   margin: 0 auto;
   background: var(--color-bg);
 }
@@ -67,7 +67,7 @@ const activeTab = ref('home')
   left: 50%;
   transform: translateX(-50%);
   width: 100%;
-  max-width: 480px;
+  max-width: (100%, 480px);
   background: var(--color-white);
   border-top: 1.5px solid var(--color-border);
   display: flex;

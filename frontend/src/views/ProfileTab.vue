@@ -30,10 +30,10 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import api from '../../api.js'
 
 const router = useRouter()
 
-// Placeholder — later this will come from your backend after login
 const user = ref({
   firstName: 'Juan',
   lastName: 'Dela Cruz',
@@ -42,9 +42,8 @@ const user = ref({
 
 async function handleLogout() {
   try {
-    await fetch('/api/auth/logout', { method: 'POST' })
+    await api.post('/auth/logout')
   } catch (err) {
-    // Even if logout fails on the server, clear the frontend anyway
     console.error('Logout error:', err)
   }
   router.push('/login')

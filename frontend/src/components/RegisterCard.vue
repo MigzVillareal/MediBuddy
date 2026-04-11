@@ -37,6 +37,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import api from '../../api.js'
 
 const router = useRouter()
 
@@ -64,27 +65,15 @@ async function handleRegister() {
   }
 
   try {
-    const response = await fetch('/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        username: username.value,
-        password: password.value,
-      }),
+    await api.post('/auth/register', {
+      username: username.value,
+      password: password.value,
     })
 
-    const data = await response.json()
-
-    if (!response.ok) {
-      errorMessage.value = data.error || 'Registration failed.'
-      return
-    }
-
-    // Registration successful — send them to login
     router.push('/login')
 
   } catch (err) {
-    errorMessage.value = 'Could not connect to server. Is Flask running?'
+    errorMessage.value = err.response?.data?.error || 'Registration failed.'
   }
 }
 </script>

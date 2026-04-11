@@ -38,8 +38,8 @@
           @click="selectMedicine(med)"
         >
           <div>
-            <p class="result-card__name">{{ med.generic_name }}</p>
             <p class="result-card__brand">{{ med.brand_name }}</p>
+            <p class="result-card__name">{{ med.generic_name }}</p>
             <span class="result-card__form">{{ med.dosage_form }}</span>
           </div>
           <span class="result-card__arrow">›</span>
@@ -166,8 +166,8 @@ function confirmAdd() {
 .result-list { display: flex; flex-direction: column; gap: 10px; }
 .result-card { background: var(--color-white); border-radius: 14px; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; box-shadow: var(--shadow-card); cursor: pointer; transition: transform 0.1s; }
 .result-card:active { transform: scale(0.98); }
-.result-card__name  { font-size: 15px; font-weight: 700; color: var(--color-text-dark); }
-.result-card__brand { font-size: 12px; color: var(--color-text-muted); margin-top: 2px; }
+.result-card__brand  { font-size: 15px; font-weight: 700; color: var(--color-text-dark); }
+.result-card__name { font-size: 12px; color: var(--color-text-muted); margin-top: 2px; }
 .result-card__form  { display: inline-block; margin-top: 6px; font-size: 11px; font-weight: 700; background: var(--color-primary-light); color: var(--color-primary-dark); padding: 2px 8px; border-radius: 20px; }
 .result-card__arrow { font-size: 22px; color: var(--color-primary); }
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: flex; align-items: flex-end; z-index: 100; }

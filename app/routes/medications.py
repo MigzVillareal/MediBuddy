@@ -19,11 +19,12 @@ def drug_search():
     return jsonify([
         {
             "id": d.id,
-            "name": d.name,
-            "strength": d.strength
+            "drug_name": d.name,
+            "dosage_strength": d.strength
         }
         for d in results
     ])
+
 @meds_bp.route('/drug_stock', methods=['POST'])
 def add_drug():
     data = request.get_json()
@@ -31,12 +32,12 @@ def add_drug():
     generic_name = (data.get("Generic_Name") or "").strip()
     dosage_strength = (data.get("Dosage_Strength") or "").strip()
 
-    if not generic_name:
+    if not drug_name:
         return jsonify({"error": "Generic_Name is required"}), 400
 
-    Drug = Medication(
-        Drug_Name=generic_name,
-        Dosage_Strength=dosage_strength
+    drug = Drug(
+        drug_name=drug_name,
+        dosage_strength=dosage_strength
     )
 
     db.session.add(drug)

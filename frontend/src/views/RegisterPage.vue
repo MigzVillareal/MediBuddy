@@ -1,42 +1,20 @@
 <template>
-  <!--
-    RegisterPage.vue
-    ────────────────
-    Identical layout to LoginPage.
-    Swaps LoginCard for RegisterCard.
-  -->
   <div class="page">
     <div class="card-wrapper">
-
-      <!-- Branding above the card -->
       <div class="brand">
+        <span class="pill-icon">💊</span>
         <span class="app-name">MediBuddy</span>
       </div>
-
-      <!-- Register card -->
       <RegisterCard />
-
     </div>
   </div>
 </template>
 
-<script>
+<script setup>
 import RegisterCard from '@/components/RegisterCard.vue'
-
-export default {
-  name: 'RegisterPage',
-  components: { RegisterCard },
-}
 </script>
 
-<!--
-  The styles below are a copy of LoginPage's styles.
-  Later, if you want to avoid repeating yourself, you can
-  move these into a shared layout component — but for now,
-  keeping it simple and explicit is fine.
--->
 <style scoped>
-
 .page {
   min-height: 100vh;
   width: 100%;
@@ -46,12 +24,10 @@ export default {
   justify-content: center;
   padding: 24px 16px;
 }
-
 .card-wrapper {
   width: 100%;
   max-width: 440px;
 }
-
 .brand {
   display: flex;
   align-items: center;
@@ -59,11 +35,7 @@ export default {
   gap: 10px;
   margin-bottom: 24px;
 }
-
-.pill-icon {
-  font-size: 36px;
-}
-
+.pill-icon { font-size: 36px; }
 .app-name {
   font-size: 28px;
   font-weight: 800;
@@ -71,19 +43,9 @@ export default {
   letter-spacing: -0.5px;
   font-family: var(--font-main);
 }
-
 @media (max-width: 480px) {
-  .app-name {
-    font-size: 24px;
-  }
-
-  .pill-icon {
-    font-size: 30px;
-  }
-
-  :deep(.card) {
-    padding: 24px 18px;
-  }
+  .app-name { font-size: 24px; }
+  .pill-icon { font-size: 30px; }
+  :deep(.card) { padding: 24px 18px; }
 }
-
 </style>

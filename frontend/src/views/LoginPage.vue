@@ -23,13 +23,9 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import LoginCard from '@/components/LoginCard.vue'
 
-export default {
-  name: 'LoginPage',
-  components: { LoginCard },
-}
 </script>
 
 <style scoped>

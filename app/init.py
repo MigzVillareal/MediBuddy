@@ -6,7 +6,7 @@ from .config import Config
 from flask_login import LoginManager
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'trackr_db12345'
+app.config['SECRET_KEY'] = 'medibuddy_db'
 app.config.from_object(Config)
 
 db = SQLAlchemy(app)

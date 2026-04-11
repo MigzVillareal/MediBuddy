@@ -2,19 +2,22 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_cors import CORS
-from .config import Config
 from flask_login import LoginManager
 
+from .config import Config
+from app.routes import api_bp
+
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'medibuddy_db'
 app.config.from_object(Config)
+app.config['SECRET_KEY'] = 'medibuddy_db'
 
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 CORS(app)
-
 login = LoginManager(app)
 
-print(app.config['SQLALCHEMY_DATABASE_URI'])
+# register routes
+app.register_blueprint(api_bp, url_prefix='/api')
 
-from . import routes, models
+# load models and routes
+from . import models

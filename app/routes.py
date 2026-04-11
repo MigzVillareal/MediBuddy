@@ -1,36 +1,45 @@
-from flask import jsonify, request
+from flask import jsonify, request, Blueprint
 from werkzeug.security import generate_password_hash
 from app.models import User
 from . import app, db
 from flask import render_template, redirect, url_for, flash
 from flask_login import current_user, login_user, login_required, logout_user
-from .forms import LoginForm
 import sqlalchemy as sa
 
-@app.route("/")
+api_bp = Blueprint('api', __name__)
+
+@api_bp.route("/")
 def home():
     return render_template("LoginPage")
 
-@app.route('/login', methods=['GET', 'POST'])
-def login():
+@api_bp.route('/login', methods=['GET', 'POST'])
+def api_login():
+    try:
+        data = request.get_json()
 
-    form = LoginForm()
+        username = data.get("username")
+        password = data.get("password")
 
-    if form.validate_on_submit():
         user = db.session.scalar(
-            sa.select(User).where(User.username == form.username.data)
+            sa.select(User).where(User.username == username.data)
         )
-
+    
         if user is None or not user.check_password(form.password.data):
-            flash('Invalid username or password')
-            return redirect(url_for('LoginPage'))
+            return jsonify({"error": "Invalid Credentials"}), 401
 
-        login_user(user, remember=form.remember_me.data)
-        return redirect(url_for('Home'))
+        login_user(user)
+        return jsonify({
+            "message": "Login successful",
+            "user": {
+                "id": user.user_id,
+                "username": user.username,
+                "email": user.email
+            }
+        }), 200
 
-    return render_template('LoginPage', title='Sign In', form=form)
+        return render_template('LoginPage', title='Sign In', form=form)
 
-@app.route('/users', methods=['POST'])
+@app.route('/register', methods=['POST'])
 def register_user():
     try:
         data = request.get_json() or request.form
@@ -44,7 +53,7 @@ def register_user():
         if not username or not email or not password:
             return jsonify({"error": "All fields are required"}), 400
 
-        #check if user/email already exits#
+        # check if user/email already exist
         if User.query.filter_by(username=username).first():
             return jsonify({"error": "Username already exists"}), 400
         if User.query.filter_by(email=email).first():
@@ -64,3 +73,8 @@ def register_user():
         
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route('/logout')
+def logout():
+    logout_user()
+    return redirect(url_for('landing_page'))

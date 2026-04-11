@@ -1,0 +1,66 @@
+/*
+  global.css
+  ──────────
+  This file is imported ONCE in main.js and applies to the ENTIRE app.
+  Put fonts, color variables, and base resets here.
+  Never put page-specific styles here.
+*/
+
+/* ── FONT ── */
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap');
+
+/*
+  ── CSS VARIABLES ──
+  These are like a color palette for the whole app.
+  Change one value here and it updates everywhere.
+  Usage in any .vue file: color: var(--color-primary);
+*/
+:root {
+  /* Brand colors */
+  --color-primary:       #0ea5e9;   /* main sky blue — buttons, links */
+  --color-primary-dark:  #0284c7;   /* darker blue — hover/active states */
+  --color-primary-light: #e0f2fe;   /* very light blue — backgrounds, borders */
+  --color-bg:            #f0f9ff;   /* page background */
+
+  /* Text colors */
+  --color-text-dark:     #0c4a6e;   /* headings */
+  --color-text-body:     #475569;   /* body text, labels */
+  --color-text-muted:    #7ab8d4;   /* subtle text like taglines */
+  --color-text-error:    #ef4444;   /* error messages */
+
+  /* UI colors */
+  --color-white:         #ffffff;
+  --color-input-bg:      #f8fcff;
+  --color-border:        #e0f2fe;
+
+  /* Font */
+  --font-main: 'Nunito', sans-serif;
+
+  /* Border radius */
+  --radius-card:  24px;
+  --radius-input: 12px;
+  --radius-btn:   14px;
+
+  /* Shadows */
+  --shadow-card: 0 8px 32px rgba(14, 165, 233, 0.12);
+}
+
+/* ── BASE RESET ── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+html, body, #app {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-main);
+  background-color: var(--color-bg);
+  color: var(--color-text-body);
+  -webkit-font-smoothing: antialiased; /* makes fonts crisper on Mac/iOS */
+}

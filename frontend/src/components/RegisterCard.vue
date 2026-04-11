@@ -1,0 +1,209 @@
+<template>
+  <div class="card">
+    <h2 class="card-title">Create Account</h2>
+
+    <!-- USERNAME -->
+    <div class="field">
+      <label class="label">Username</label>
+      <input
+        class="input"
+        type="text"
+        placeholder="Choose a username"
+        v-model="username"
+      />
+    </div>
+
+    <!-- PASSWORD -->
+    <div class="field">
+      <label class="label">Password</label>
+      <input
+        class="input"
+        :type="showPassword ? 'text' : 'password'"
+        placeholder="Create a password"
+        v-model="password"
+      />
+      <button class="toggle-pw" type="button" @click="showPassword = !showPassword">
+        {{ showPassword ? 'Hide' : 'Show' }}
+      </button>
+    </div>
+
+    <!-- CONFIRM PASSWORD -->
+    <div class="field">
+      <label class="label">Confirm Password</label>
+      <input
+        class="input"
+        :type="showConfirm ? 'text' : 'password'"
+        placeholder="Repeat your password"
+        v-model="confirmPassword"
+      />
+      <button class="toggle-pw" type="button" @click="showConfirm = !showConfirm">
+        {{ showConfirm ? 'Hide' : 'Show' }}
+      </button>
+    </div>
+
+    <!-- ERROR MESSAGE -->
+    <p class="error" v-if="errorMessage">{{ errorMessage }}</p>
+
+    <!-- REGISTER BUTTON -->
+    <button class="btn-register" @click="handleRegister">
+      Create Account
+    </button>
+
+    <!-- BACK TO LOGIN -->
+    <p class="login-prompt">
+      Already have an account?
+      <router-link to="/login" class="login-link">Sign in</router-link>
+    </p>
+  </div>
+</template>
+
+<script>
+export default {
+  name: 'RegisterCard',
+
+  data() {
+    return {
+      username: '',
+      password: '',
+      confirmPassword: '',
+      showPassword: false,
+      showConfirm: false,
+      errorMessage: '',
+    }
+  },
+
+  methods: {
+    handleRegister() {
+      // 1. Clear old errors
+      this.errorMessage = ''
+
+      // 2. Check all fields are filled
+      if (!this.username || !this.password || !this.confirmPassword) {
+        this.errorMessage = 'Please fill in all fields.'
+        return
+      }
+
+      // 3. Check passwords match
+      if (this.password !== this.confirmPassword) {
+        this.errorMessage = 'Passwords do not match.'
+        return
+      }
+
+      // 4. Check password length
+      if (this.password.length < 6) {
+        this.errorMessage = 'Password must be at least 6 characters.'
+        return
+      }
+
+      // 5. Placeholder — connect to backend later
+      alert(`Account created for ${this.username}! (Backend coming soon)`)
+    },
+  },
+}
+</script>
+
+<style scoped>
+
+.card {
+  background: var(--color-white);
+  border-radius: var(--radius-card);
+  padding: 32px 24px;
+  width: 100%;
+  box-shadow: var(--shadow-card);
+}
+
+.card-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--color-text-dark);
+  margin-bottom: 24px;
+}
+
+.field {
+  margin-bottom: 18px;
+  position: relative;
+}
+
+.label {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text-body);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.input {
+  width: 100%;
+  padding: 14px 16px;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-input);
+  font-size: 16px;
+  font-family: var(--font-main);
+  color: #1e293b;
+  background: var(--color-input-bg);
+  outline: none;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.input:focus {
+  border-color: var(--color-primary);
+  background: var(--color-white);
+}
+
+.toggle-pw {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--font-main);
+  cursor: pointer;
+  padding: 0;
+}
+
+.error {
+  color: var(--color-text-error);
+  font-size: 13px;
+  font-weight: 600;
+  margin: -6px 0 14px;
+}
+
+.btn-register {
+  width: 100%;
+  padding: 16px;
+  background: var(--color-primary);
+  border: none;
+  border-radius: var(--radius-btn);
+  color: var(--color-white);
+  font-size: 16px;
+  font-weight: 800;
+  font-family: var(--font-main);
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+  margin-top: 4px;
+}
+
+.btn-register:hover  { background: var(--color-primary-dark); }
+.btn-register:active { transform: scale(0.98); }
+
+.login-prompt {
+  text-align: center;
+  font-size: 14px;
+  color: var(--color-text-body);
+  margin-top: 20px;
+}
+
+.login-link {
+  color: var(--color-primary);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.login-link:hover { text-decoration: underline; }
+
+</style>

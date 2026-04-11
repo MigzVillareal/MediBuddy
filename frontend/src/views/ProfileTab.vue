@@ -40,8 +40,13 @@ const user = ref({
   username: 'juandc',
 })
 
-function handleLogout() {
-  // Later: clear auth token here
+async function handleLogout() {
+  try {
+    await fetch('/api/auth/logout', { method: 'POST' })
+  } catch (err) {
+    // Even if logout fails on the server, clear the frontend anyway
+    console.error('Logout error:', err)
+  }
   router.push('/login')
 }
 </script>

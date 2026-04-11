@@ -1,8 +1,9 @@
 from flask import Blueprint, jsonify, request
 from app import db
-from app.models import Medication
+from app.models import Drug
 
 meds_bp = Blueprint('meds', __name__)
+
 
 @meds_bp.route('/drug_search', methods=['GET'])
 def drug_search():
@@ -11,19 +12,18 @@ def drug_search():
     if not query:
         return jsonify({"error": "Search query required"}), 400
 
-    results = Medication.query.filter(
-        Medication.Drug_Name.ilike(f"%{query}%")
+    results = Drug.query.filter(
+        Drug.name.ilike(f"%{query}%")
     ).all()
 
     return jsonify([
         {
-            "id": drug.id,
-            "name": drug.Drug_Name,
-            "dosage": drug.Dosage_Strength
+            "id": d.id,
+            "name": d.name,
+            "strength": d.strength
         }
-        for drug in results
+        for d in results
     ])
-
 @meds_bp.route('/drug_stock', methods=['POST'])
 def add_drug():
     data = request.get_json()
@@ -34,7 +34,7 @@ def add_drug():
     if not generic_name:
         return jsonify({"error": "Generic_Name is required"}), 400
 
-    drug = Medication(
+    Drug = Medication(
         Drug_Name=generic_name,
         Dosage_Strength=dosage_strength
     )
@@ -42,4 +42,4 @@ def add_drug():
     db.session.add(drug)
     db.session.commit()
 
-    return jsonify({'message': 'Drug Registered'}), 201
+    return jsonify({'message': 'Drug Added'}), 201

@@ -1,42 +1,45 @@
-from typing import Optional
-import sqlalchemy as sa
-import sqlalchemy.orm as so
-from .extensions import db
-from flask_login import UserMixin
-from .extensions import login
-from werkzeug.security import check_password_hash, generate_password_hash
+from flask import Blueprint, jsonify, request
+from app import db
+from app.models import Drug
 
+meds_bp = Blueprint('meds', __name__)
 
-@login.user_loader
-def load_user(id):
-    return db.session.get(User, int(id))
+@meds_bp.route('/drug_search', methods=['GET'])
+def drug_search():
+    query = request.args.get("q", "").strip()
 
-class User(UserMixin, db.Model):
-    __tablename__="users"
+    if not query:
+        return jsonify({"error": "Search query required"}), 400
 
-    id: so.Mapped[int] = so.mapped_column(primary_key=True)
+    results = Drug.query.filter(
+        Drug.drug_name.ilike(f"%{query}%")
+    ).all()
 
-    username: so.Mapped[str] = so.mapped_column(
-        sa.String(36), index=True, unique=True
+    return jsonify([
+        {
+            "id": d.id,
+            "drug_name": d.drug_name,
+            "dosage_strength": d.dosage_strength
+        }
+        for d in results
+    ])
+
+@meds_bp.route('/drug_stock', methods=['POST'])
+def add_drug():
+    data = request.get_json()
+
+    drug_name = (data.get("drug_name") or "").strip()
+    dosage_strength = (data.get("dosage_strength") or "").strip()
+
+    if not drug_name:
+        return jsonify({"error": "drug_name is required"}), 400
+
+    drug = Drug(
+        drug_name=drug_name,
+        dosage_strength=dosage_strength
     )
-    first_name: so.Mapped[str] = so.mapped_column(
-        sa.String(64), nullable=False
-    )
-    last_name: so.Mapped[str] = so.mapped_column(
-        sa.String(64), nullable=False
-    )
-    email: so.Mapped[str] = so.mapped_column(
-        sa.String(64), index=True, unique=True
-    )
-    password_hash: so.Mapped[Optional[str]] = so.mapped_column(
-        sa.String(256)
-    )
 
-    def set_password(self, password):
-        self.password_hash = generate_password_hash(password)
+    db.session.add(drug)
+    db.session.commit()
 
-    def check_password(self, password):
-        return check_password_hash(self.password_hash, password)
-
-    def __repr__(self):
-        return '<User {}>'.format(self.username)
+    return jsonify({"message": "Drug added successfully"}), 201

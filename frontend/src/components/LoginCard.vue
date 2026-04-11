@@ -1,48 +1,24 @@
 <template>
-  <!--
-    LoginCard.vue
-    ─────────────
-    This is ONLY the white card with the form inside it.
-    It knows nothing about the page layout around it.
-    The parent page (LoginPage.vue) decides where to place it.
-  -->
   <div class="card">
     <h2 class="card-title">Sign In</h2>
 
-    <!-- USERNAME FIELD -->
     <div class="field">
       <label class="label">Username</label>
-      <input
-        class="input"
-        type="text"
-        placeholder="Enter your username"
-        v-model="username"
-      />
+      <input class="input" type="text" placeholder="Enter your username" v-model="username" />
     </div>
 
-    <!-- PASSWORD FIELD -->
     <div class="field">
       <label class="label">Password</label>
-      <input
-        class="input"
-        :type="showPassword ? 'text' : 'password'"
-        placeholder="Enter your password"
-        v-model="password"
-      />
+      <input class="input" :type="showPassword ? 'text' : 'password'" placeholder="Enter your password" v-model="password" />
       <button class="toggle-pw" type="button" @click="showPassword = !showPassword">
         {{ showPassword ? 'Hide' : 'Show' }}
       </button>
     </div>
 
-    <!-- ERROR MESSAGE -->
     <p class="error" v-if="errorMessage">{{ errorMessage }}</p>
 
-    <!-- LOGIN BUTTON -->
-    <button class="btn-login" @click="handleLogin">
-      Sign In
-    </button>
+    <button class="btn-login" @click="handleLogin">Sign In</button>
 
-    <!-- REGISTER LINK -->
     <p class="register-prompt">
       Don't have an account?
       <router-link to="/register" class="register-link">Register here</router-link>
@@ -50,41 +26,34 @@
   </div>
 </template>
 
-<script>
-export default {
-  name: 'LoginCard',
+<script setup>
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 
-  data() {
-    return {
-      username: '',
-      password: '',
-      showPassword: false,
-      errorMessage: '',
-    }
-  },
+// useRouter() gives us access to navigation (replaces this.$router)
+const router = useRouter()
 
-  methods: {
-    handleLogin() {
-      this.errorMessage = ''
+// ref() makes a variable reactive — the template updates when it changes
+const username     = ref('')
+const password     = ref('')
+const showPassword = ref(false)
+const errorMessage = ref('')
 
-      if (!this.username || !this.password) {
-        this.errorMessage = 'Please fill in both fields.'
-        return
-      }
+function handleLogin() {
+  errorMessage.value = ''
 
-      // Placeholder — you'll connect a real backend here later
-      alert(`Welcome, ${this.username}! (Login logic coming soon)`)
-    },
-  },
+  if (!username.value || !password.value) {
+    errorMessage.value = 'Please fill in both fields.'
+    return
+  }
+
+  // Later: call your backend API here
+  // On success, navigate to home:
+  router.push('/home')
 }
 </script>
 
 <style scoped>
-/*
-  Only card-specific styles live here.
-  Colors and fonts come from global.css via CSS variables.
-*/
-
 .card {
   background: var(--color-white);
   border-radius: var(--radius-card);
@@ -92,20 +61,16 @@ export default {
   width: 100%;
   box-shadow: var(--shadow-card);
 }
-
 .card-title {
   font-size: 22px;
   font-weight: 800;
   color: var(--color-text-dark);
   margin-bottom: 24px;
 }
-
-/* ── FIELD ── */
 .field {
   margin-bottom: 20px;
   position: relative;
 }
-
 .label {
   display: block;
   font-size: 13px;
@@ -115,7 +80,6 @@ export default {
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
-
 .input {
   width: 100%;
   padding: 14px 16px;
@@ -128,13 +92,10 @@ export default {
   outline: none;
   transition: border-color 0.2s, background 0.2s;
 }
-
 .input:focus {
   border-color: var(--color-primary);
   background: var(--color-white);
 }
-
-/* ── SHOW / HIDE ── */
 .toggle-pw {
   position: absolute;
   right: 14px;
@@ -148,16 +109,12 @@ export default {
   cursor: pointer;
   padding: 0;
 }
-
-/* ── ERROR ── */
 .error {
   color: var(--color-text-error);
   font-size: 13px;
   font-weight: 600;
   margin: -10px 0 16px;
 }
-
-/* ── LOGIN BUTTON ── */
 .btn-login {
   width: 100%;
   padding: 16px;
@@ -172,30 +129,18 @@ export default {
   transition: background 0.2s, transform 0.1s;
   margin-top: 4px;
 }
-
-.btn-login:hover {
-  background: var(--color-primary-dark);
-}
-
-.btn-login:active {
-  transform: scale(0.98);
-}
-
-/* ── REGISTER LINK ── */
+.btn-login:hover  { background: var(--color-primary-dark); }
+.btn-login:active { transform: scale(0.98); }
 .register-prompt {
   text-align: center;
   font-size: 14px;
   color: var(--color-text-body);
   margin-top: 20px;
 }
-
 .register-link {
   color: var(--color-primary);
   font-weight: 700;
   text-decoration: none;
 }
-
-.register-link:hover {
-  text-decoration: underline;
-}
+.register-link:hover { text-decoration: underline; }
 </style>

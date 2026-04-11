@@ -1,20 +1,27 @@
 import csv
 import os
-from flask import Blueprint, request, jsonify, make_response
+from flask import Blueprint, request, jsonify
 
 autocomplete_bp = Blueprint("autocomplete", __name__, url_prefix="/api")
 
-# CSV path (safe version)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-CSV_PATH = os.path.join(BASE_DIR, "..", "data", "drugs.csv")
+CSV_PATH = os.path.join(BASE_DIR, "..", "data", "drug_lookup_table.csv")
 
 
 def load_drugs():
     items = []
-    with open("app/data/drug_lookup_table.csv", newline="", encoding="utf-8") as f:
+
+    with open(CSV_PATH, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
+
         for row in reader:
-            items.append(row)
+            items.append({
+                "generic_name": row.get("Generic Name") or row.get("generic_name"),
+                "brand_name": row.get("Brand Name") or row.get("brand_name"),
+                "dosage_strength": row.get("Dosage Strength") or row.get("dosage_strength"),
+                "dosage_form": row.get("Dosage Form") or row.get("dosage_form"),
+            })
+
     return items
 
 
@@ -35,15 +42,7 @@ def autocomplete():
         generic = (drug.get("generic_name") or "").lower()
         form = (drug.get("dosage_form") or "").lower()
 
-        if (
-            query in brand
-            or query in generic
-            or query in form
-        ):
-            results.append({
-                "brand_name": drug.get("brand_name"),
-                "generic_name": drug.get("generic_name"),
-                "dosage_form": drug.get("dosage_form"),
-            })
+        if query in brand or query in generic or query in form:
+            results.append(drug)
 
     return jsonify(results[:10])

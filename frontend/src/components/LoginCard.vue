@@ -29,6 +29,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import api from '../api.js'
 
 const router = useRouter()
 
@@ -46,26 +47,16 @@ async function handleLogin() {
   }
 
   try {
-    const response = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        username: username.value,
-        password: password.value,
-      }),
+    await api.post('/auth/login', {
+      username: username.value,
+      password: password.value,
     })
-
-    const data = await response.json()
-
-    if (!response.ok) {
-      errorMessage.value = data.error || 'Login failed.'
-      return
-    }
 
     router.push('/home')
 
   } catch (err) {
-    errorMessage.value = 'Could not connect to server. Is Flask running?'
+    // axios puts the server's error response inside err.response
+    errorMessage.value = err.response?.data?.error || 'Login failed.'
   }
 }
 </script>

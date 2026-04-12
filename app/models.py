@@ -45,10 +45,6 @@ class Drug_Stock(db.Model):
 
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
 
-    drug_lookup_id: so.Mapped[int] = so.mapped_column(
-        sa.ForeignKey("drug_lookup.id")
-    )
-
     brand_name: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))
     generic_name: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))
     dosage_form: so.Mapped[Optional[str]] = so.mapped_column(sa.String(50))

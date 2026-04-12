@@ -55,7 +55,7 @@
           {{ selectedMed.brand_name }} · {{ selectedMed.dosage_form }}
         </p>
 
-        <div class="field">
+        <!-- <div class="field">
           <label class="label">Dose</label>
           <input class="input" v-model="form.dose" />
         </div>
@@ -63,10 +63,10 @@
         <div class="field">
           <label class="label">Schedule</label>
           <input class="input" v-model="form.schedule" />
-        </div>
+        </div> -->
 
         <div class="field">
-          <label class="label">Stock</label>
+          <label class="label">Stock Quantity</label>
           <input class="input" type="number" v-model="form.stock" />
         </div>
 

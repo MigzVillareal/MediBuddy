@@ -29,7 +29,12 @@ class User(UserMixin, db.Model):
     last_name = db.Column(db.String(64), nullable=True)
 
     circles = db.relationship("Circle", backref="owner", lazy=True)
-    memberships = db.relationship("CircleMember", backref="user", lazy=True)
+    
+    memberships = db.relationship(
+        "CircleMember",
+        foreign_keys="CircleMember.user_id",
+        backref="user"
+    )
     
 class Drug_Lookup(db.Model):
     __tablename__ = "drug_lookup"
@@ -71,8 +76,7 @@ class CircleMember(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
 
-    circle_id = db.Column(db.Integer, db.ForeignKey("circles.id"))
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
-    user_username = db.Column(db.Integer, db.ForeignKey("users.username"))
+    circle_id = db.Column(db.Integer, db.ForeignKey("circles.id"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
 
-    permission = db.Column(db.String(20), nullable=False)
+    permission = db.Column(db.String(20), nullable=False)  # "canedit" | "viewonly"

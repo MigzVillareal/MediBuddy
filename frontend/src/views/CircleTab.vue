@@ -27,8 +27,8 @@
       <p class="form-title">Add a Member</p>
       <input class="input" type="text" placeholder="Enter their username" v-model="newMemberName" />
       <select v-model="newPermission" class="input">
-        <option value="canview">Can View</option>
-        <option value="canedit">Can Edit</option>
+        <option value="canview">View Only</option>
+        <option value="canedit">Allow Edit</option>
       </select>
       <button class="btn-primary" @click="addMember">Add to Circle</button>
     </div>

@@ -28,13 +28,17 @@ class User(UserMixin, db.Model):
     first_name = db.Column(db.String(64), nullable=True)
     last_name = db.Column(db.String(64), nullable=True)
 
+    drug_stocks = db.relationship("Drug_Stock", backref="user", lazy=True)
+
     circles = db.relationship("Circle", backref="owner", lazy=True)
     memberships = db.relationship("CircleMember", backref="user", lazy=True)
 
 class Drug_Lookup(db.Model):
-    tablename = "drug_lookup"
+    __tablename__ = "drug_lookup"
 
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
+
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
 
     brand_name: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))
     generic_name: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))
@@ -44,6 +48,8 @@ class Drug_Stock(db.Model):
     __tablename__ = "drug_stock"
 
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
+
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
 
     brand_name: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))
     generic_name: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))

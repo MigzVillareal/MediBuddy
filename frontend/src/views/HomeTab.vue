@@ -219,7 +219,7 @@ onMounted(fetchMedications)
 /* ── Add button ── */
 .add-btn-wrap {
   position: fixed;
-  bottom: 72px;
+  bottom: 100px;
   left: 50%;
   transform: translateX(-50%);
   width: calc(100% - 40px);

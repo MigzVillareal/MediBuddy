@@ -1,10 +1,18 @@
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
+from functools import wraps
 from app import db
 from app.models import Drug_Stock
 
 meds_bp = Blueprint('meds', __name__)
 
+def safe_login_required(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        if request.method == "OPTIONS":
+            return "", 200
+        return login_required(fn)(*args, **kwargs)
+    return wrapper
 
 @meds_bp.route('/drug_search', methods=['GET'])
 def drug_search():
@@ -33,16 +41,12 @@ def drug_search():
 def add_drug():
     data = request.get_json(force=True)
 
-    brand_name = data.get("brand_name", "")
-    generic_name = data.get("generic_name", "")
-    dosage_form = data.get("dosage_form", "")
-    quantity = data.get("quantity")
-
     drug = Drug_Stock(
-        brand_name=brand_name,
-        generic_name=generic_name,
-        dosage_form=dosage_form,
-        quantity=int(quantity),
+        user_id=current_user.id,
+        brand_name=data.get("brand_name", ""),
+        generic_name=data.get("generic_name", ""),
+        dosage_form=data.get("dosage_form", ""),
+        quantity=int(data.get("quantity")),
     )
 
     db.session.add(drug)
@@ -50,8 +54,8 @@ def add_drug():
 
     return jsonify({'message': 'Drug Added', 'id': drug.id}), 201
 
-@meds_bp.route('/meds/drug_stock/<int:drug_id>', methods=['PATCH'])
-@login_required
+@meds_bp.route('/drug_stock/<int:drug_id>', methods=['PATCH', 'OPTIONS'])
+@safe_login_required
 def update_stock(drug_id):
     drug = Drug_Stock.query.filter_by(id=drug_id, user_id=current_user.id).first()
  
@@ -70,8 +74,8 @@ def update_stock(drug_id):
     return jsonify({"message": "Updated", "quantity": drug.quantity}), 200
  
  
-@meds_bp.route('/meds/drug_stock/<int:drug_id>', methods=['DELETE'])
-@login_required
+@meds_bp.route('/drug_stock/<int:drug_id>', methods=['DELETE', 'OPTIONS'])
+@safe_login_required
 def delete_drug(drug_id):
     drug = Drug_Stock.query.filter_by(id=drug_id, user_id=current_user.id).first()
  
@@ -82,3 +86,19 @@ def delete_drug(drug_id):
     db.session.commit()
  
     return jsonify({"message": "Deleted"}), 200
+
+@meds_bp.route('/drug_stock', methods=['GET'])
+@login_required
+def get_drug_stock():
+    drugs = Drug_Stock.query.all()
+
+    return jsonify([
+        {
+            "id": d.id,
+            "brand_name": d.brand_name,
+            "generic_name": d.generic_name,
+            "dosage_form": d.dosage_form,
+            "quantity": d.quantity
+        }
+        for d in drugs
+    ])

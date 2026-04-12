@@ -29,22 +29,16 @@ class User(UserMixin, db.Model):
     last_name = db.Column(db.String(64), nullable=True)
 
     circles = db.relationship("Circle", backref="owner", lazy=True)
-    
-    memberships = db.relationship(
-        "CircleMember",
-        foreign_keys="CircleMember.user_id",
-        backref="user"
-    )
-    
+    memberships = db.relationship("CircleMember", backref="user", lazy=True)
+
 class Drug_Lookup(db.Model):
-    __tablename__ = "drug_lookup"
+    tablename = "drug_lookup"
 
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
 
     brand_name: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))
     generic_name: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))
     dosage_form: so.Mapped[Optional[str]] = so.mapped_column(sa.String(50))
-
 
 class Drug_Stock(db.Model):
     __tablename__ = "drug_stock"
@@ -76,7 +70,7 @@ class CircleMember(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
 
-    circle_id = db.Column(db.Integer, db.ForeignKey("circles.id"), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    circle_id = db.Column(db.Integer, db.ForeignKey("circles.id"))
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
 
-    permission = db.Column(db.String(20), nullable=False)  # "canedit" | "viewonly"
+    permission = db.Column(db.String(20), nullable=False)

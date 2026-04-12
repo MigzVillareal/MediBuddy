@@ -29,22 +29,43 @@ def drug_search():
 def add_drug():
     data = request.get_json()
 
-    brand_name = (data.get("Brand_Name") or "").strip()
-    generic_name = (data.get("Generic_Name") or "").strip()
-    dosage_form = (data.get("Dosage_Form") or "").strip()
-    quantity = (data.get("Quantity") or "").strip()
+    drug_lookup_id = data.get("drug_lookup_id")
+    quantity = data.get("quantity")
 
-    if not drug_name:
-        return jsonify({"error": "Generic_Name is required"}), 400
+    if not drug_lookup_id:
+        return jsonify({"error": "drug_lookup_id is required"}), 400
+
+    if quantity is None:
+        return jsonify({"error": "quantity is required"}), 400
+
+    try:
+        quantity = int(quantity)
+    except (ValueError, TypeError):
+        return jsonify({"error": "quantity must be a number"}), 400
+
+    lookup_drug = db.session.get(Drug_Lookup, drug_lookup_id)
+
+    if not lookup_drug:
+        return jsonify({"error": "Drug not found"}), 404
 
     drug = Drug_Stock(
-        brand_name=brand_name,
-        generic_name=generic_name,
-        dosage_form=dosage_form,
-        quantity=quantity,
+        drug_lookup_id=lookup_drug.id,
+        brand_name=lookup_drug.brand_name,
+        generic_name=lookup_drug.generic_name,
+        dosage_form=lookup_drug.dosage_form,
+        quantity=quantity
     )
 
     db.session.add(drug)
     db.session.commit()
 
-    return jsonify({'message': 'Drug Added'}), 201
+    return jsonify({
+        "message": "Drug added to stock",
+        "drug": {
+            "id": drug.id,
+            "brand_name": drug.brand_name,
+            "generic_name": drug.generic_name,
+            "dosage_form": drug.dosage_form,
+            "quantity": drug.quantity
+        }
+    }), 201

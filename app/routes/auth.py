@@ -62,13 +62,15 @@ def logout():
     return jsonify({"message": "Logged out"}), 200
 
 @auth_bp.route('/me', methods=['GET'])
-@login_required
 def get_me():
-    return jsonify({
-        "username": current_user.username,
-        "first_name": current_user.first_name,
-        "last_name": current_user.last_name
-    })
+    if current_user.is_authenticated:
+        return jsonify({
+            "id": current_user.id,
+            "username": current_user.username,
+            "first_name": current_user.first_name,
+            "last_name": current_user.last_name,
+        }), 200
+    return jsonify({"error": "Not logged in"}), 401
 
 @auth_bp.route('/profile', methods=['POST'])
 @login_required

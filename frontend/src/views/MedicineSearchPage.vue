@@ -4,7 +4,7 @@
       <button class="btn-back" @click="router.back()">← Back</button>
       <span class="top-bar__title">Add Medicine</span>
     </header>
-
+ 
     <div class="search-wrap">
       <input
         class="search-input"
@@ -14,22 +14,20 @@
         @input="handleSearch"
       />
     </div>
-
+ 
     <div class="hint" v-if="!searchQuery">
       <span class="hint-icon">🔍</span>
       <p>Start typing to search for a medicine.</p>
     </div>
-
+ 
     <div class="results" v-if="searchQuery">
       <p class="results-label" v-if="filteredMeds.length > 0">
         {{ filteredMeds.length }} result(s) found
       </p>
-
       <div class="hint" v-if="filteredMeds.length === 0">
         <span class="hint-icon">😕</span>
         <p>No medicine found for "<strong>{{ searchQuery }}</strong>"</p>
       </div>
-
       <div class="result-list">
         <div
           class="result-card"
@@ -46,39 +44,22 @@
         </div>
       </div>
     </div>
-
+ 
+    <!-- ADD MODAL -->
     <div class="modal-overlay" v-if="selectedMed" @click.self="selectedMed = null">
       <div class="modal">
-        <h3 class="modal-title">{{ selectedMed.generic_name }}</h3>
-
-        <p class="modal-sub">
-          {{ selectedMed.brand_name }} · {{ selectedMed.dosage_form }}
-        </p>
-
-        <!-- <div class="field">
-          <label class="label">Dose</label>
-          <input class="input" v-model="form.dose" />
-        </div>
-
-        <div class="field">
-          <label class="label">Schedule</label>
-          <input class="input" v-model="form.schedule" />
-        </div> -->
-
+        <h3 class="modal-title">{{ selectedMed.brand_name }}</h3>
+        <p class="modal-sub">{{ selectedMed.generic_name }} · {{ selectedMed.dosage_form }}</p>
+ 
         <div class="field">
           <label class="label">Stock Quantity</label>
-          <input class="input" type="number" v-model="form.stock" />
+          <input class="input" type="number" min="1" v-model="form.stock" placeholder="e.g. 30" />
         </div>
-
+ 
         <p class="error" v-if="formError">{{ formError }}</p>
-
-        <button class="btn-primary" @click="confirmAdd">
-          Add to My Medications
-        </button>
-
-        <button class="btn-cancel" @click="selectedMed = null">
-          Cancel
-        </button>
+ 
+        <button class="btn-primary" @click="confirmAdd">Add to My Medications</button>
+        <button class="btn-cancel" @click="selectedMed = null">Cancel</button>
       </div>
     </div>
   </div>
@@ -88,66 +69,63 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/api'
-
+ 
 const router = useRouter()
-
-const searchQuery = ref('')
-const selectedMed = ref(null)
+ 
+const searchQuery  = ref('')
+const selectedMed  = ref(null)
 const filteredMeds = ref([])
-const formError = ref('')
-
-const form = reactive({
-  dose: '',
-  schedule: '',
-  stock: ''
-})
-
+const formError    = ref('')
+ 
+const form = reactive({ stock: '' })
+ 
 let timeout = null
-
+ 
 function handleSearch() {
   clearTimeout(timeout)
-
   timeout = setTimeout(async () => {
     const q = searchQuery.value.trim()
-
-    if (!q) {
-      filteredMeds.value = []
-      return
-    }
-
+    if (!q) { filteredMeds.value = []; return }
     try {
-      const res = await api.get('/autocomplete', {
-        params: { q }
-      })
-
+      const res = await api.get('/autocomplete', { params: { q } })
       filteredMeds.value = res.data
-
     } catch (err) {
       console.error('Search failed:', err)
       filteredMeds.value = []
     }
   }, 200)
 }
-
+ 
 function selectMedicine(med) {
   selectedMed.value = med
-
-  form.dose = ''
-  form.schedule = ''
   form.stock = ''
-
   formError.value = ''
 }
-
-function confirmAdd() {
-  if (/*!form.dose || !form.schedule ||*/ !form.stock) {
-    formError.value = 'Please fill in all fields.'
+ 
+async function confirmAdd() {
+  formError.value = ''
+ 
+  if (!form.stock || Number(form.stock) < 1) {
+    formError.value = 'Please enter a valid stock quantity.'
     return
   }
-
-  alert(`${selectedMed.value.generic_name} added!`)
-  selectedMed.value = null
-  router.back()
+ 
+  try {
+    
+    await api.post('/meds/drug_stock', {
+      brand_name:   selectedMed.value.brand_name,
+      generic_name: selectedMed.value.generic_name,
+      dosage_form:  selectedMed.value.dosage_form,
+      quantity:     Number(form.stock),
+    })
+ 
+    selectedMed.value = null
+    router.back()
+ 
+  } catch (err) {
+    formError.value = err.response?.data?.error || 'Failed to save medication.'
+    console.error(err)
+  }
 }
 </script>
 
@@ -166,8 +144,8 @@ function confirmAdd() {
 .result-list { display: flex; flex-direction: column; gap: 10px; }
 .result-card { background: var(--color-white); border-radius: 14px; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; box-shadow: var(--shadow-card); cursor: pointer; transition: transform 0.1s; }
 .result-card:active { transform: scale(0.98); }
-.result-card__brand  { font-size: 15px; font-weight: 700; color: var(--color-text-dark); }
-.result-card__name { font-size: 12px; color: var(--color-text-muted); margin-top: 2px; }
+.result-card__brand { font-size: 15px; font-weight: 700; color: var(--color-text-dark); }
+.result-card__name  { font-size: 12px; color: var(--color-text-muted); margin-top: 2px; }
 .result-card__form  { display: inline-block; margin-top: 6px; font-size: 11px; font-weight: 700; background: var(--color-primary-light); color: var(--color-primary-dark); padding: 2px 8px; border-radius: 20px; }
 .result-card__arrow { font-size: 22px; color: var(--color-primary); }
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: flex; align-items: flex-end; z-index: 100; }

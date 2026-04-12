@@ -73,5 +73,6 @@ class CircleMember(db.Model):
 
     circle_id = db.Column(db.Integer, db.ForeignKey("circles.id"))
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
+    user_username = db.Column(db.Integer, db.ForeignKey("users.username"))
 
     permission = db.Column(db.String(20), nullable=False)

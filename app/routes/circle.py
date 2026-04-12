@@ -38,14 +38,60 @@ def add_member():
 
     return jsonify({"message": "member added"})
 
+# ─────────────────────────────────────────────────────────────────
+# CHANGED: now joins User table to return username in each member
+# ─────────────────────────────────────────────────────────────────
 @circle_bp.route("/circle/<int:circle_id>/members", methods=["GET"])
 def get_members(circle_id):
     members = CircleMember.query.filter_by(circle_id=circle_id).all()
 
-    return jsonify([
-        {
+    result = []
+    for m in members:
+        user = User.query.get(m.user_id)
+        result.append({
             "user_id": m.user_id,
+            "username": user.username if user else f"User {m.user_id}",  # ADDED
             "permission": m.permission
-        }
-        for m in members
-    ])
+        })
+
+    return jsonify(result)
+
+# ─────────────────────────────────────────────────────────────────
+# ADDED: update an existing member's permission
+# ─────────────────────────────────────────────────────────────────
+@circle_bp.route("/circle/update_permission", methods=["POST"])
+def update_permission():
+    data = request.get_json()
+
+    member = CircleMember.query.filter_by(
+        circle_id=data["circle_id"],
+        user_id=data["user_id"]
+    ).first()
+
+    if not member:
+        return jsonify({"error": "Member not found"}), 404
+
+    member.permission = data.get("permission", member.permission)
+    db.session.commit()
+
+    return jsonify({"message": "Permission updated"})
+
+# ─────────────────────────────────────────────────────────────────
+# ADDED: remove a member from the circle
+# ─────────────────────────────────────────────────────────────────
+@circle_bp.route("/circle/remove_member", methods=["POST"])
+def remove_member():
+    data = request.get_json()
+
+    member = CircleMember.query.filter_by(
+        circle_id=data["circle_id"],
+        user_id=data["user_id"]
+    ).first()
+
+    if not member:
+        return jsonify({"error": "Member not found"}), 404
+
+    db.session.delete(member)
+    db.session.commit()
+
+    return jsonify({"message": "Member removed"})

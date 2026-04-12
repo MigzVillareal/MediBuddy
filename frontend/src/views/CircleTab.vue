@@ -15,7 +15,7 @@
         <div class="member-card__info">
           <p class="member-card__name">{{ member.name }}</p>
           <div class="badges">
-            <span class="badge" :class="{ 'badge--on': member.permission === 'canview' }">👁 View</span>
+            <span class="badge" :class="{ 'badge--on': member.permission === 'canview' || member.permission === 'canedit' }">👁 View</span>
             <span class="badge" :class="{ 'badge--on': member.permission === 'canedit' }">✏️ Edit</span>
           </div>
         </div>
@@ -25,23 +25,26 @@
 
     <div class="form-card">
       <p class="form-title">Add a Member</p>
+      <p v-if="addError" class="error-msg">{{ addError }}</p>
       <input class="input" type="text" placeholder="Enter their username" v-model="newMemberName" />
       <select v-model="newPermission" class="input">
         <option value="canview">View Only</option>
         <option value="canedit">Allow Edit</option>
       </select>
-      <button class="btn-primary" @click="addMember">Add to Circle</button>
+      <button class="btn-primary" @click="addMember" :disabled="isAdding">
+        {{ isAdding ? 'Adding…' : 'Add to Circle' }}
+      </button>
     </div>
 
     <div class="modal-overlay" v-if="editingMember" @click.self="editingMember = null">
       <div class="modal">
         <h3 class="modal-title">Edit Permissions</h3>
         <p class="modal-sub">{{ editingMember.name }}</p>
-        <div class="toggle-row">
-          <label class="toggle-label"><input type="checkbox" v-model="editingMember.canView" /> Can View</label>
-          <label class="toggle-label"><input type="checkbox" v-model="editingMember.canEdit" /> Can Edit</label>
-        </div>
-        <button class="btn-primary" @click="editingMember = null">Save</button>
+        <select v-model="editingMember.permission" class="input">
+          <option value="canview">View Only</option>
+          <option value="canedit">Allow Edit</option>
+        </select>
+        <button class="btn-primary" @click="saveEdit">Save</button>
         <button class="btn-danger" @click="removeMember(editingMember)">Remove Member</button>
       </div>
     </div>
@@ -52,20 +55,18 @@
 import { ref, onMounted } from 'vue'
 import api from '@/api'
 
-const circleId = 1 // later replace with real user circle
+const circleId = 1
 
 const familyMembers = ref([])
 const newMemberName = ref('')
 const newPermission = ref('canview')
 const editingMember = ref(null)
+const addError = ref('')
+const isAdding = ref(false)
 
-//
-// LOAD MEMBERS FROM BACKEND
-//
 async function loadMembers() {
   try {
     const res = await api.get(`/circle/${circleId}/members`)
-    
     familyMembers.value = res.data.map(m => ({
       id: m.user_id,
       name: m.username || `User ${m.user_id}`,
@@ -78,14 +79,15 @@ async function loadMembers() {
 
 onMounted(loadMembers)
 
-//
-// ADD MEMBER
-//
 async function addMember() {
+  addError.value = ''
+
   if (!newMemberName.value.trim()) {
-    alert('Enter username')
+    addError.value = 'Please enter a username.'
     return
   }
+
+  isAdding.value = true
 
   try {
     await api.post('/circle/add_member', {
@@ -95,23 +97,21 @@ async function addMember() {
     })
 
     newMemberName.value = ''
+    newPermission.value = 'canview'
     await loadMembers()
 
   } catch (err) {
+    addError.value = err.response?.data?.error || 'Failed to add member.'
     console.error(err)
+  } finally {
+    isAdding.value = false
   }
 }
 
-//
-// OPEN EDIT
-//
 function openEdit(member) {
   editingMember.value = { ...member }
 }
 
-//
-// UPDATE PERMISSION
-//
 async function saveEdit() {
   try {
     await api.post('/circle/update_permission', {
@@ -128,9 +128,6 @@ async function saveEdit() {
   }
 }
 
-//
-// REMOVE MEMBER
-//
 async function removeMember(member) {
   try {
     await api.post('/circle/remove_member', {
@@ -182,6 +179,7 @@ async function removeMember(member) {
 .btn-icon { background: none; border: none; font-size: 20px; cursor: pointer; padding: 4px; }
 .form-card { background: var(--color-white); border-radius: 16px; padding: 20px; box-shadow: var(--shadow-card); }
 .form-title { font-size: 15px; font-weight: 700; color: var(--color-text-dark); margin-bottom: 12px; }
+.error-msg { font-size: 13px; color: #ef4444; margin-bottom: 10px; font-weight: 600; }
 .input {
   width: 100%;
   padding: 13px 16px;
@@ -194,12 +192,12 @@ async function removeMember(member) {
   outline: none;
   margin-bottom: 12px;
   transition: border-color 0.2s;
+  box-sizing: border-box;
 }
 .input:focus { border-color: var(--color-primary); }
-.toggle-row { display: flex; gap: 20px; margin-bottom: 14px; }
-.toggle-label { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: var(--color-text-body); cursor: pointer; }
 .btn-primary { width: 100%; padding: 14px; background: var(--color-primary); border: none; border-radius: var(--radius-btn); color: var(--color-white); font-size: 15px; font-weight: 800; font-family: var(--font-main); cursor: pointer; transition: background 0.2s; }
-.btn-primary:hover { background: var(--color-primary-dark); }
+.btn-primary:hover:not(:disabled) { background: var(--color-primary-dark); }
+.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 20px; }
 .modal { background: var(--color-white); border-radius: 20px; padding: 28px 24px; width: 100%; max-width: 340px; }
 .modal-title { font-size: 18px; font-weight: 800; color: var(--color-text-dark); margin-bottom: 4px; }

@@ -140,7 +140,7 @@ function selectMedicine(med) {
 }
 
 function confirmAdd() {
-  if (!form.dose || !form.schedule || !form.stock) {
+  if (/*!form.dose || !form.schedule ||*/ !form.stock) {
     formError.value = 'Please fill in all fields.'
     return
   }

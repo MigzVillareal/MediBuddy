@@ -7,22 +7,23 @@ meds_bp = Blueprint('meds', __name__)
 
 
 @meds_bp.route('/drug_search', methods=['GET'])
-@login_required
 def drug_search():
     query = request.args.get("q", "").strip()
 
     if not query:
         return jsonify({"error": "Search query required"}), 400
 
-    results = Drug.query.filter(
-        Drug.name.ilike(f"%{query}%")
+    results = Drug_Lookup.query.filter(
+        (Drug_Lookup.brand_name.ilike(f"%{query}%")) |
+        (Drug_Lookup.generic_name.ilike(f"%{query}%"))
     ).all()
 
     return jsonify([
         {
             "id": d.id,
-            "drug_name": d.name,
-            "dosage_strength": d.strength
+            "brand_name": d.brand_name,
+            "generic_name": d.generic_name,
+            "dosage_form": d.dosage_form
         }
         for d in results
     ])
@@ -37,8 +38,8 @@ def add_drug():
     dosage_form = (data.get("Dosage_Form") or "").strip()
     quantity = data.get("quantity", 0)
 
-    if not generic_name:
-        return jsonify({"error": "Generic_Name is required"}), 400
+    # if not generic_name:
+    #     return jsonify({"error": "Generic_Name is required"}), 400
 
     drug = Drug_Stock(
         brand_name=brand_name,

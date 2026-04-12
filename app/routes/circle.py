@@ -1,4 +1,5 @@
 from flask import Blueprint, request, jsonify
+from flask_login import login_required, current_user
 from app import db
 from app.models import Circle, CircleMember, User
 
@@ -18,7 +19,22 @@ def create_circle():
 
     return jsonify({"message": "circle created", "circle_id": circle.id})
 
+# ─────────────────────────────────────────────────────────────────
+# ADDED: returns the logged-in user's circle, creating it if needed
+# ─────────────────────────────────────────────────────────────────
+@circle_bp.route("/circle/mine", methods=["GET"])
+@login_required
+def get_my_circle():
+    circle = Circle.query.filter_by(owner_id=current_user.id).first()
+    if not circle:
+        circle = Circle(name=f"{current_user.username}'s circle", owner_id=current_user.id)
+        db.session.add(circle)
+        db.session.commit()
+    return jsonify({"circle_id": circle.id})
+
+
 @circle_bp.route("/circle/add_member", methods=["POST"])
+@login_required
 def add_member():
     data = request.get_json()
 
@@ -26,6 +42,16 @@ def add_member():
 
     if not user:
         return jsonify({"error": "User not found"}), 404
+
+    if user.id == current_user.id:
+        return jsonify({"error": "You cannot add yourself to your circle"}), 400
+
+    existing = CircleMember.query.filter_by(
+        circle_id=data["circle_id"],
+        user_id=user.id
+    ).first()
+    if existing:
+        return jsonify({"error": "User is already in this circle"}), 409
 
     member = CircleMember(
         circle_id=data["circle_id"],

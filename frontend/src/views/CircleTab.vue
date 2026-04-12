@@ -55,7 +55,11 @@
 import { ref, onMounted } from 'vue'
 import api from '@/api'
 
-const circleId = 1
+// ─────────────────────────────────────────────────────────────────
+// CHANGED: circleId is now fetched from the backend per logged-in
+// user, instead of being hardcoded to 1
+// ─────────────────────────────────────────────────────────────────
+const circleId = ref(null)
 
 const familyMembers = ref([])
 const newMemberName = ref('')
@@ -64,12 +68,26 @@ const editingMember = ref(null)
 const addError = ref('')
 const isAdding = ref(false)
 
-async function loadMembers() {
+// ── LOAD ─────────────────────────────────────────────────────────
+
+// CHANGED: first fetch the user's own circle ID, then load members
+async function init() {
   try {
-    const res = await api.get(`/circle/${circleId}/members`)
+    const res = await api.get('/circle/mine')
+    circleId.value = res.data.circle_id
+    await loadMembers()
+  } catch (err) {
+    console.error('Failed to load circle:', err)
+  }
+}
+
+async function loadMembers() {
+  if (!circleId.value) return
+  try {
+    const res = await api.get(`/circle/${circleId.value}/members`)
     familyMembers.value = res.data.map(m => ({
       id: m.user_id,
-      name: m.username || `User ${m.user_id}`,
+      name: m.username,
       permission: m.permission
     }))
   } catch (err) {
@@ -77,29 +95,26 @@ async function loadMembers() {
   }
 }
 
-onMounted(loadMembers)
+onMounted(init)  // CHANGED: was onMounted(loadMembers)
+
+// ── ADD ──────────────────────────────────────────────────────────
 
 async function addMember() {
   addError.value = ''
-
   if (!newMemberName.value.trim()) {
     addError.value = 'Please enter a username.'
     return
   }
-
   isAdding.value = true
-
   try {
     await api.post('/circle/add_member', {
-      circle_id: circleId,
+      circle_id: circleId.value,
       username: newMemberName.value.trim(),
       permission: newPermission.value
     })
-
     newMemberName.value = ''
     newPermission.value = 'canview'
     await loadMembers()
-
   } catch (err) {
     addError.value = err.response?.data?.error || 'Failed to add member.'
     console.error(err)
@@ -108,6 +123,8 @@ async function addMember() {
   }
 }
 
+// ── EDIT ─────────────────────────────────────────────────────────
+
 function openEdit(member) {
   editingMember.value = { ...member }
 }
@@ -115,29 +132,27 @@ function openEdit(member) {
 async function saveEdit() {
   try {
     await api.post('/circle/update_permission', {
-      circle_id: circleId,
+      circle_id: circleId.value,
       user_id: editingMember.value.id,
       permission: editingMember.value.permission
     })
-
     editingMember.value = null
     await loadMembers()
-
   } catch (err) {
     console.error(err)
   }
 }
 
+// ── REMOVE ───────────────────────────────────────────────────────
+
 async function removeMember(member) {
   try {
     await api.post('/circle/remove_member', {
-      circle_id: circleId,
+      circle_id: circleId.value,
       user_id: member.id
     })
-
     editingMember.value = null
     await loadMembers()
-
   } catch (err) {
     console.error(err)
   }

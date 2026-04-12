@@ -1,11 +1,11 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, make_response
 from werkzeug.security import generate_password_hash
 from app.models import User
 from app.extensions import db
 from flask_login import login_user, login_required, logout_user, current_user
 import sqlalchemy as sa
 
-auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
+auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 
 @auth_bp.route('/register', methods=['POST'])
 def register():
@@ -60,3 +60,52 @@ def login():
 def logout():
     logout_user()
     return jsonify({"message": "Logged out"}), 200
+
+@auth_bp.route('/me', methods=['GET'])
+@login_required
+def get_me():
+    return jsonify({
+        "username": current_user.username,
+        "first_name": current_user.first_name,
+        "last_name": current_user.last_name
+    })
+
+@auth_bp.route('/profile', methods=['POST'])
+@login_required
+def update_profile():
+    data = request.get_json()
+
+    first_name = (data.get("first_name") or "").strip()
+    last_name  = (data.get("last_name") or "").strip()
+
+    current_user.first_name = first_name
+    current_user.last_name  = last_name
+
+    db.session.commit()
+
+    return jsonify({"message": "Profile updated"})
+
+@auth_bp.route('/profile', methods=['GET', 'POST', 'OPTIONS'])
+def profile():
+
+    if request.method == "OPTIONS":
+        return make_response("", 200)
+
+    if request.method == "GET":
+        return jsonify({
+            "username": current_user.username,
+            "first_name": current_user.first_name,
+            "last_name": current_user.last_name,
+        })
+
+    if request.method == "POST":
+        data = request.get_json()
+
+        current_user.first_name = data.get("first_name")
+        current_user.last_name = data.get("last_name")
+
+        db.session.commit()
+
+        return jsonify({"message": "Profile updated"})
+
+    return jsonify({"error": "Method not allowed"}), 405

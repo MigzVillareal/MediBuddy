@@ -15,8 +15,8 @@
         <div class="member-card__info">
           <p class="member-card__name">{{ member.name }}</p>
           <div class="badges">
-            <span class="badge" :class="{ 'badge--on': member.canView }">👁 View</span>
-            <span class="badge" :class="{ 'badge--on': member.canEdit }">✏️ Edit</span>
+            <span class="badge" :class="{ 'badge--on': member.permission === 'canview' }">👁 View</span>
+            <span class="badge" :class="{ 'badge--on': member.permission === 'canedit' }">✏️ Edit</span>
           </div>
         </div>
         <button class="btn-icon" @click="openEdit(member)">⚙️</button>
@@ -26,10 +26,10 @@
     <div class="form-card">
       <p class="form-title">Add a Member</p>
       <input class="input" type="text" placeholder="Enter their username" v-model="newMemberName" />
-      <div class="toggle-row">
-        <label class="toggle-label"><input type="checkbox" v-model="newCanView" /> Can View</label>
-        <label class="toggle-label"><input type="checkbox" v-model="newCanEdit" /> Can Edit</label>
-      </div>
+      <select v-model="newPermission" class="input">
+        <option value="canview">Can View</option>
+        <option value="canedit">Can Edit</option>
+      </select>
       <button class="btn-primary" @click="addMember">Add to Circle</button>
     </div>
 
@@ -49,38 +49,101 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import api from '@/api'
 
-const familyMembers  = ref([])
-const newMemberName  = ref('')
-const newCanView     = ref(true)
-const newCanEdit     = ref(false)
-const editingMember  = ref(null)  // null = modal closed
+const circleId = 1 // later replace with real user circle
 
-function addMember() {
+const familyMembers = ref([])
+const newMemberName = ref('')
+const newPermission = ref('canview')
+const editingMember = ref(null)
+
+//
+// LOAD MEMBERS FROM BACKEND
+//
+async function loadMembers() {
+  try {
+    const res = await api.get(`/circle/${circleId}/members`)
+    
+    familyMembers.value = res.data.map(m => ({
+      id: m.user_id,
+      name: m.username || `User ${m.user_id}`,
+      permission: m.permission
+    }))
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+onMounted(loadMembers)
+
+//
+// ADD MEMBER
+//
+async function addMember() {
   if (!newMemberName.value.trim()) {
-    alert('Please enter a username.')
+    alert('Enter username')
     return
   }
-  familyMembers.value.push({
-    id: Date.now(),
-    name: newMemberName.value.trim(),
-    canView: newCanView.value,
-    canEdit: newCanEdit.value,
-  })
-  // Reset form
-  newMemberName.value = ''
-  newCanView.value    = true
-  newCanEdit.value    = false
+
+  try {
+    await api.post('/circle/add_member', {
+      circle_id: circleId,
+      username: newMemberName.value.trim(),
+      permission: newPermission.value
+    })
+
+    newMemberName.value = ''
+    await loadMembers()
+
+  } catch (err) {
+    console.error(err)
+  }
 }
 
+//
+// OPEN EDIT
+//
 function openEdit(member) {
-  editingMember.value = member
+  editingMember.value = { ...member }
 }
 
-function removeMember(member) {
-  familyMembers.value = familyMembers.value.filter(m => m.id !== member.id)
-  editingMember.value = null
+//
+// UPDATE PERMISSION
+//
+async function saveEdit() {
+  try {
+    await api.post('/circle/update_permission', {
+      circle_id: circleId,
+      user_id: editingMember.value.id,
+      permission: editingMember.value.permission
+    })
+
+    editingMember.value = null
+    await loadMembers()
+
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+//
+// REMOVE MEMBER
+//
+async function removeMember(member) {
+  try {
+    await api.post('/circle/remove_member', {
+      circle_id: circleId,
+      user_id: member.id
+    })
+
+    editingMember.value = null
+    await loadMembers()
+
+  } catch (err) {
+    console.error(err)
+  }
 }
 </script>
 

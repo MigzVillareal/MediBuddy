@@ -7,22 +7,21 @@
       <p class="profile-name">{{ user.firstName }} {{ user.lastName }}</p>
       <p class="profile-username">@{{ user.username }}</p>
     </div>
-
     <div class="profile-card">
       <div class="profile-row">
         <span class="profile-row__label">First Name</span>
-        <span class="profile-row__value">{{ user.firstName }}</span>
+        <input class="profile-row__value input-inline" v-model="user.firstName" />
       </div>
       <div class="profile-row">
         <span class="profile-row__label">Last Name</span>
-        <span class="profile-row__value">{{ user.lastName }}</span>
+        <input class="profile-row__value input-inline" v-model="user.lastName" />
       </div>
       <div class="profile-row">
         <span class="profile-row__label">Username</span>
         <span class="profile-row__value">@{{ user.username }}</span>
       </div>
     </div>
-
+    <button class="btn-save" @click="saveProfile">Save Changes</button>
     <button class="btn-logout" @click="handleLogout">Sign Out</button>
   </div>
 </template>
@@ -31,6 +30,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../api.js'
+import { onMounted } from 'vue'
 
 const router = useRouter()
 
@@ -39,6 +39,32 @@ const user = ref({
   lastName: 'Dela Cruz',
   username: 'juandc',
 })
+
+onMounted(async () => {
+  try {
+    const res = await api.get('/auth/me')
+    user.value = {
+      firstName: res.data.first_name || '',
+      lastName: res.data.last_name || '',
+      username: res.data.username
+    }
+  } catch (err) {
+    console.error('Failed to load user:', err)
+  }
+})
+
+async function saveProfile() {
+  try {
+    await api.post('/auth/profile', {
+      first_name: user.value.firstName,
+      last_name: user.value.lastName
+    })
+
+    alert('Profile updated!')
+  } catch (err) {
+    console.error('Update failed:', err)
+  }
+}
 
 async function handleLogout() {
   try {

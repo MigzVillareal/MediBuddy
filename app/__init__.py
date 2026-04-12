@@ -14,7 +14,11 @@ app.config['SECRET_KEY'] = 'medibuddy_db'
 db.init_app(app)
 login.init_app(app)
 migrate = Migrate(app, db)
-CORS(app, supports_credentials=True)
+CORS(
+    app,
+    resources={r"/api/*": {"origins": "http://localhost:5173"}},
+    supports_credentials=True
+)
 
 register_routes(app)
 

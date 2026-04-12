@@ -109,7 +109,7 @@ async function confirmAdd() {
     formError.value = 'Please enter a valid stock quantity.'
     return
   }
- 
+ console.log(selectedMed.value)
   try {
     
     await api.post('/meds/drug_stock', {

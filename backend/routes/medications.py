@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
 from functools import wraps
 from app import db
-from app.models import Drug_Stock
+from models import Drug_Stock
 
 meds_bp = Blueprint('meds', __name__)
 

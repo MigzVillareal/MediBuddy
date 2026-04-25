@@ -3,8 +3,8 @@ from flask_cors import CORS
 
 from config import Config
 from extensions import db
-from auth_routes import auth_bp
-from user_routes import user_bp
+from routes.auth_routes import auth_bp
+from routes.user_routes import user_bp
 
 def create_app():
 

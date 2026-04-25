@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
 from schemas import UserSchema
 from models import User
-from app.extensions import db
+from backend.extensions import db
 
 user_bp = Blueprint("user", __name__, url_prefix="/api/user")
 

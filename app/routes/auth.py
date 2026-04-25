@@ -15,13 +15,15 @@ def register():
     password = data.get("password")
 
     if not username or not password:
-        return jsonify({"error": "Missing fields"}), 400
+        return jsonify({"error": "username and password are required"}), 400
 
     if User.query.filter_by(username=username).first():
         return jsonify({"error": "Username already exists"}), 400
 
-    user = User(username=username)
-    user.set_password(password)
+    user = User(
+        username=username,
+        password_hash=generate_password_hash(password),
+    )
 
     db.session.add(user)
     db.session.commit()

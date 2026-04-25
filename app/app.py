@@ -2,7 +2,9 @@ from flask import Flask, jsonify
 from flask_cors import CORS
 
 from config import Config
-from 
+from extensions import db
+from auth_routes import auth_bp
+from user_routes import user_bp
 
 def create_app():
 
@@ -13,6 +15,7 @@ def create_app():
 
     CORS(
         app,
+        supports_credentials = True,
         origins=app.config["CORS_ORIGINS"],
         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allow_headers=["Content-Type", "Authorization"],

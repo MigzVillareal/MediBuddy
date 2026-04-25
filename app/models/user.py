@@ -1,3 +1,5 @@
+from flask_login import UserMixin
+from werkzeug.security import generate_password_hash, check_password_hash
 from models import db
 
 class User(UserMixin, db.Model):
@@ -25,5 +27,4 @@ class User(UserMixin, db.Model):
         return {
             "user_id": self.user_id,
             "username": self.username,
-
         }

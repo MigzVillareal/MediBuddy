@@ -1,8 +1,9 @@
-from flask import Blueprint, request, jsonify, make_response
+from flask import Blueprint, request, jsonify
 from werkzeug.security import generate_password_hash
-from models import User
 from extensions import db
-from flask_login import login_user, login_required, logout_user, current_user
+from models import User
+from schemas import UserSchema
+from flask_login import login_user, logout_user, login_required
 import sqlalchemy as sa
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
@@ -49,12 +50,11 @@ def login():
 
     login_user(user)
 
+    user_data = UserSchema.model_validate(user).model_dump()
+
     return jsonify({
         "message": "Login successful",
-        "user": {
-            "id": user.user_id,
-            "username": user.username
-        }
+        "user": user_data
     }), 200
 
 @auth_bp.route('/logout', methods=['POST'])
@@ -62,14 +62,3 @@ def login():
 def logout():
     logout_user()
     return jsonify({"message": "Logged out"}), 200
-
-@auth_bp.route('/me', methods=['GET'])
-def get_me():
-    if current_user.is_authenticated:
-        return jsonify({
-            "id": current_user.id,
-            "username": current_user.username,
-            "first_name": current_user.first_name,
-            "last_name": current_user.last_name,
-        }), 200
-    return jsonify({"error": "Not logged in"}), 401

@@ -1,37 +1,14 @@
 from typing import Optional
 import sqlalchemy as sa
 import sqlalchemy.orm as so
-from .extensions import db
+from backend.extensions import db
 from flask_login import UserMixin
-from .extensions import login
+from backend.extensions import login
 from werkzeug.security import check_password_hash, generate_password_hash
 
-@login.user_loader
-def load_user(id):
-    return db.session.get(User, int(id))
-
-class User(UserMixin, db.Model):
-    __tablename__ = "users"
-
-    id = db.Column(db.Integer, primary_key=True)
-
-    username = db.Column(db.String(36), unique=True, index=True, nullable=False)
-
-    password_hash = db.Column(db.String(256))
-    def set_password(self, password):
-        self.password_hash = generate_password_hash(password)
-
-    def check_password(self, password):
-        return check_password_hash(self.password_hash, password)
-
-    
-    first_name = db.Column(db.String(64), nullable=True)
-    last_name = db.Column(db.String(64), nullable=True)
-
-    drug_stocks = db.relationship("Drug_Stock", backref="user", lazy=True)
-
-    circles = db.relationship("Circle", backref="owner", lazy=True)
-    memberships = db.relationship("CircleMember", backref="user", lazy=True)
+# @login.user_loader
+# def load_user(id):
+#     return db.session.get(User, int(id))
 
 class Drug_Lookup(db.Model):
     __tablename__ = "drug_lookup"

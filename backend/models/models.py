@@ -34,16 +34,6 @@ class Drug_Stock(db.Model):
 
     quantity: so.Mapped[int] = so.mapped_column(sa.Integer)
 
-class Circle(db.Model):
-    __tablename__ = "circles"
-
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-
-    owner_id = db.Column(db.Integer, db.ForeignKey("users.id"))
-
-    members = db.relationship("CircleMember", backref="circle", lazy=True)
-
 class CircleMember(db.Model):
     __tablename__ = "circle_members"
 

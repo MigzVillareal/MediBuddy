@@ -7,4 +7,9 @@ class Generic(db.Model):
     generic_name = db.Column(db.String(100), nullable=False)
     dosage_strength = db.Column(db.String(50), nullable=False)
 
-    GenericBrand = db.relationship("Brand", backref="Generic", lazy=True)
+def to_dict(self):
+        return {
+            "user_id": self.generic_id,
+            "username": self.generic_name,
+            "dosage_strength": self.dosage_strength,
+        }

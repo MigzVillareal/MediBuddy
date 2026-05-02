@@ -5,6 +5,11 @@ class Brand(db.Model):
 
     brand_id = db.Column(db.Integer, primary_key=True)
     brand_name = db.Column(db.String(100), nullable=False)
-
-    brand_supply = db.relationship("HealthSupply", backref="Brand", lazy=True)
     
+    generic_info = db.relationship("Generic", backref="brands", lazy=True)
+    
+    def to_dict(self):
+        return {
+            "brand_id": self.brand_id,
+            "brand_name": self.brand_name,
+        }

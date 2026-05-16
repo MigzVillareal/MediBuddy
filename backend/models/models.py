@@ -6,9 +6,9 @@ from flask_login import UserMixin
 from extensions import login
 from werkzeug.security import check_password_hash, generate_password_hash
 
-# @login.user_loader
-# def load_user(id):
-#     return db.session.get(User, int(id))
+@login.user_loader
+def load_user(id):
+    return db.session.get(User, int(id))
 
 # USER
 
@@ -35,9 +35,10 @@ class Prescription(db.Model):
 
     prescription_id: so.Mapped[int] = so.mapped_column(primary_key=True)
 
-    Description:
-    # to put: duration(date_start, date_end)
-    # to put: {schedule(set_day, set_time,set_frequency)}
+    Description: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))
+    Date: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))
+    Doctor: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))
+    Detail: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))
 
 
 # PRESCRIPTION_DETAIL
@@ -50,6 +51,8 @@ class Prescription_Detail(db.Model):
     Description: so.Mapped[str] = so.mapped_column(sa.String(120))
     # to put: duration(date_start, date_end)
     # to put: {schedule(set_day, set_time,set_frequency)}
+
+#
 
 
 # MED_LOOKUP

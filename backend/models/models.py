@@ -75,12 +75,14 @@ class Med_Lookup(db.Model):
 class Med_Supply(db.Model):
     __tablename__ = "med_supply"
 
-    supply_id: so.Mapped[int] = so.mapped_column(primary_key=True)
+    id: so.Mapped[int] = so.mapped_column(primary_key=True)
 
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.user_id"), nullable=False)
 
-    quantity: so.Mapped[int] = so.mapped_column(sa.Integer)
-    # to put: [intakes_left(supply_left/ dosage_strength)]
+    brand_name: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))
+    generic_name: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))
+    dosage_form: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))
+    quantity: so.Mapped[int] = so.mapped_column(sa.Integer, default=0)
     expiration_date: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))
 
 

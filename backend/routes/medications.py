@@ -1,8 +1,8 @@
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
 from functools import wraps
-from app import db
-from models import Drug_Stock
+from extensions import db
+from models import Med_Supply
 
 meds_bp = Blueprint('meds', __name__)
 
@@ -21,9 +21,9 @@ def drug_search():
     if not query:
         return jsonify({"error": "Search query required"}), 400
 
-    results = Drug_Lookup.query.filter(
-        (Drug_Lookup.brand_name.ilike(f"%{query}%")) |
-        (Drug_Lookup.generic_name.ilike(f"%{query}%"))
+    results = Med_Supply.query.filter(
+        (Med_Supply.brand_name.ilike(f"%{query}%")) |
+        (Med_Supply.generic_name.ilike(f"%{query}%"))
     ).all()
 
     return jsonify([
@@ -41,8 +41,8 @@ def drug_search():
 def add_drug():
     data = request.get_json(force=True)
 
-    drug = Drug_Stock(
-        user_id=current_user.id,
+    drug = Med_Supply(
+        user_id=current_user.user_id,
         brand_name=data.get("brand_name", ""),
         generic_name=data.get("generic_name", ""),
         dosage_form=data.get("dosage_form", ""),
@@ -57,7 +57,7 @@ def add_drug():
 @meds_bp.route('/drug_stock/<int:drug_id>', methods=['PATCH', 'OPTIONS'])
 @safe_login_required
 def update_stock(drug_id):
-    drug = Drug_Stock.query.filter_by(id=drug_id, user_id=current_user.id).first()
+    drug = Med_Supply.query.filter_by(id=drug_id, user_id=current_user.user_id).first()
  
     if not drug:
         return jsonify({"error": "Not found"}), 404
@@ -77,7 +77,7 @@ def update_stock(drug_id):
 @meds_bp.route('/drug_stock/<int:drug_id>', methods=['DELETE', 'OPTIONS'])
 @safe_login_required
 def delete_drug(drug_id):
-    drug = Drug_Stock.query.filter_by(id=drug_id, user_id=current_user.id).first()
+    drug = Med_Supply.query.filter_by(id=drug_id, user_id=current_user.user_id).first()
  
     if not drug:
         return jsonify({"error": "Not found"}), 404
@@ -90,7 +90,7 @@ def delete_drug(drug_id):
 @meds_bp.route('/drug_stock', methods=['GET'])
 @login_required
 def get_drug_stock():
-    drugs = Drug_Stock.query.filter_by(user_id=current_user.id).all()
+    drugs = Med_Supply.query.filter_by(user_id=current_user.user_id).all()
 
     return jsonify([
         {
@@ -101,4 +101,4 @@ def get_drug_stock():
             "quantity": d.quantity
         }
         for d in drugs
-    ])
+    ])

@@ -20,7 +20,7 @@ router.beforeEach(async (to) => {
 
   let isAuthenticated = false
   try {
-    await api.get('/api/auth/me')
+    await api.get('/auth/me')
     isAuthenticated = true
   } catch {
     isAuthenticated = false

@@ -20,14 +20,14 @@ router.beforeEach(async (to) => {
 
   let isAuthenticated = false
   try {
-    await api.get('/auth/me')
+    await api.get('/api/auth/me')
     isAuthenticated = true
   } catch {
     isAuthenticated = false
   }
 
   if (to.path === '/') {
-    return isAuthenticated ? '/login' : '/login'
+    return isAuthenticated ? '/home' : '/login'
   }
 
   

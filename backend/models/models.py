@@ -56,15 +56,23 @@ class Med_Supply(db.Model):
     # to put: [intakes_left(supply_left/ dosage_strength)]
     expiration_date: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))
 
+# CIRCLE
 
-# MED_LOOKUP
+class Circle(db.Model):
+    __tablename__ = "circles"
+
+    circle_id = db.Column(db.Integer, primary_key=True)
+    circle_name = db.Column(db.String(100), nullable=False)
+
+    members = db.relationship("CircleMember", backref="circle", lazy=True)
+
+
+# CIRCLE_MEMBER
 
 class CircleMember(db.Model):
     __tablename__ = "circle_members"
 
-    id = db.Column(db.Integer, primary_key=True)
+    circle_member_id = db.Column(db.Integer, primary_key=True)
 
     circle_id = db.Column(db.Integer, db.ForeignKey("circles.id"))
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
-
-    permission = db.Column(db.String(20), nullable=False)

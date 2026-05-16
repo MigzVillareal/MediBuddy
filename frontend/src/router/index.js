@@ -27,7 +27,7 @@ router.beforeEach(async (to) => {
   }
 
   if (to.path === '/') {
-    return isAuthenticated ? '/home' : '/login'
+    return isAuthenticated ? '/login' : '/login'
   }
 
   

@@ -2,11 +2,26 @@ from flask import Blueprint, request, jsonify
 from werkzeug.security import generate_password_hash
 from extensions import db
 from models import User
-from schemas import UserSchema
 from flask_login import login_user, logout_user, login_required
 import sqlalchemy as sa
+from flask_login import current_user
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
+
+@auth_bp.route('/me', methods=['GET'])
+def get_current_user():
+    # Check if the user has an active session via Flask-Login
+    if current_user.is_authenticated:
+        user_data = UserSchema.model_validate(current_user).model_dump()
+        return jsonify({
+            "isAuthenticated": True,
+            "user": user_data
+        }), 200
+        
+    return jsonify({
+        "isAuthenticated": false,
+        "error": "Not authenticated"
+    }), 401
 
 @auth_bp.route('/register', methods=['POST'])
 def register():

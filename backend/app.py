@@ -7,12 +7,14 @@ from routes.auth_routes import auth_bp
 from routes.user_routes import user_bp
 
 def create_app():
-
+    # initialize flask object
     app = Flask(__name__)
     app.config.from_object(Config)
 
+    # database initialization
     db.init_app(app)
 
+    # CORS Config
     CORS(
         app,
         supports_credentials = True,
@@ -24,7 +26,7 @@ def create_app():
     app.register_blueprint(auth_bp)
     app.register_blueprint(user_bp)
     # app.register_blueprint(lookup_bp)
-    # app.register_blueprint(drug_bp)
+    # app.register_blueprint(drug_bp)git s
 
     return app
 

@@ -1,27 +1,11 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, make_response
 from werkzeug.security import generate_password_hash
-from extensions import db
-from models import User
-from flask_login import login_user, logout_user, login_required
+from app.models import User
+from app.extensions import db
+from flask_login import login_user, login_required, logout_user, current_user
 import sqlalchemy as sa
-from flask_login import current_user
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
-
-@auth_bp.route('/me', methods=['GET'])
-def get_current_user():
-    # Check if the user has an active session via Flask-Login
-    if current_user.is_authenticated:
-        user_data = UserSchema.model_validate(current_user).model_dump()
-        return jsonify({
-            "isAuthenticated": True,
-            "user": user_data
-        }), 200
-        
-    return jsonify({
-        "isAuthenticated": false,
-        "error": "Not authenticated"
-    }), 401
 
 @auth_bp.route('/register', methods=['POST'])
 def register():
@@ -31,11 +15,14 @@ def register():
     password = data.get("password")
 
     if not username or not password:
+        return jsonify({"error": "Missing fields"}), 400
         return jsonify({"error": "username and password are required"}), 400
 
     if User.query.filter_by(username=username).first():
         return jsonify({"error": "Username already exists"}), 400
 
+    user = User(username=username)
+    user.set_password(password)
     user = User(
         username=username,
         password_hash=generate_password_hash(password),
@@ -65,11 +52,12 @@ def login():
 
     login_user(user)
 
-    user_data = UserSchema.model_validate(user).model_dump()
-
     return jsonify({
         "message": "Login successful",
-        "user": user_data
+        "user": {
+            "id": user.id,
+            "username": user.username
+        }
     }), 200
 
 @auth_bp.route('/logout', methods=['POST'])
@@ -77,3 +65,52 @@ def login():
 def logout():
     logout_user()
     return jsonify({"message": "Logged out"}), 200
+
+@auth_bp.route('/me', methods=['GET'])
+def get_me():
+    if current_user.is_authenticated:
+        return jsonify({
+            "id": current_user.id,
+            "username": current_user.username,
+            "first_name": current_user.first_name,
+            "last_name": current_user.last_name,
+        }), 200
+    return jsonify({"error": "Not logged in"}), 401
+
+@auth_bp.route('/profile', methods=['POST'])
+@login_required
+def update_profile():
+    data = request.get_json()
+
+    first_name = (data.get("first_name") or "").strip()
+    last_name  = (data.get("last_name") or "").strip()
+
+    current_user.first_name = first_name
+    current_user.last_name  = last_name
+
+    db.session.commit()
+
+    return jsonify({"message": "Profile updated"})
+
+@auth_bp.route('/profile', methods=['GET', 'POST', 'OPTIONS'])
+def profile():
+
+    if request.method == "OPTIONS":
+        return make_response("", 200)
+
+    if request.method == "GET":
+        return jsonify({
+            "username": current_user.username,
+            "first_name": current_user.first_name,
+            "last_name": current_user.last_name,
+        })
+
+    if request.method == "POST":
+        data = request.get_json()
+
+        current_user.first_name = data.get("first_name")
+        current_user.last_name = data.get("last_name")
+
+        db.session.commit()
+
+        return jsonify({"message": "Profile updated"})

@@ -31,12 +31,12 @@ router.beforeEach(async (to) => {
   }
 
   
-  if (to.meta.public) {
-    if (isAuthenticated && (to.path === '/login' || to.path === '/register')) {
-      return '/home'
-    }
-    return true
-  }
+  // if (to.meta.public) {
+  //   if (isAuthenticated && (to.path === '/login' || to.path === '/register')) {
+  //     return '/home'
+  //   }
+  //   return true
+  // }
 
   if (!isAuthenticated) {
     return '/login'

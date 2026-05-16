@@ -1,34 +1,42 @@
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
-from schemas import UserSchema
 from models import User
 from extensions import db
 
 user_bp = Blueprint("user", __name__, url_prefix="/api/user")
 
-# reduce pydantics serialization code redundancy and drier code
 def get_user_data(user):
-    return UserSchema.model_validate(user).model_dump()
+    """
+    Helper function to manually serialize the User object.
+    Replaces Pydantic/UserSchema.model_dump()
+    """
+    return {
+        "id": user.id,
+        "username": user.username,
+        "first_name": getattr(user, "first_name", None),
+        "last_name": getattr(user, "last_name", None),
+        # Add any other fields from your User model you want sent to the frontend
+    }
 
-# for fetching public data, searching other users
-@user_bp.route("/<int:user_id>", methods = ["GET"])
+# For fetching public data, searching other users
+@user_bp.route("/<int:user_id>", methods=["GET"])
 def get_user(user_id):
     user = User.query.get_or_404(user_id)
     return jsonify(get_user_data(user)), 200
 
-# returns info about currently logged in user
+# Returns info about currently logged in user
 @user_bp.route('/me', methods=['GET'])
 @login_required
 def get_me():
     return jsonify(get_user_data(current_user)), 200
 
-# endpoint for profile management: GET(fetch) and POST(update) 
-@user_bp.route("/profile", methods=["POST"])
+# Endpoint for profile management: GSET(fetch) and POST(update)
+@user_bp.route("/profile", methods=["GET", "POST"]) # Fixed: Added "GET" to accepted methods
 @login_required
 def profile():
     if request.method == "GET":
-        user_data = UserSchema.model_validate(current_user)
-        return jsonify(user_data.model_dump()), 200
+        # manually serialize using helper function
+        return jsonify(get_user_data(current_user)), 200
 
     if request.method == "POST":
         data = request.get_json()
@@ -38,4 +46,9 @@ def profile():
         current_user.last_name = data.get("last_name", current_user.last_name)
         
         db.session.commit()
-        return jsonify({"message": "Profile updated successfully"}), 200
+        
+        # Return the updated user data back to the frontend so it can refresh its state
+        return jsonify({
+            "message": "Profile updated successfully",
+            "user": get_user_data(current_user)
+        }), 200

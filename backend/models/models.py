@@ -28,10 +28,34 @@ class User(UserMixin, db.Model):
     last_name = db.Column(db.String(64), nullable=True)
 
 
+# PRESCRIPTION
+
+class Prescription(db.Model):
+    __tablename__ = "prescriptions"
+
+    prescription_id: so.Mapped[int] = so.mapped_column(primary_key=True)
+
+    Description:
+    # to put: duration(date_start, date_end)
+    # to put: {schedule(set_day, set_time,set_frequency)}
+
+
+# PRESCRIPTION_DETAIL
+
+class Prescription_Detail(db.Model):
+    __tablename__ = "prescription_details"
+
+    prescription_detail_id: so.Mapped[int] = so.mapped_column(primary_key=True)
+
+    Description: so.Mapped[str] = so.mapped_column(sa.String(120))
+    # to put: duration(date_start, date_end)
+    # to put: {schedule(set_day, set_time,set_frequency)}
+
+
 # MED_LOOKUP
 
 class Med_Lookup(db.Model):
-    __tablename__ = "Med_Lookup"
+    __tablename__ = "med_lookup"
 
     lookup_id: so.Mapped[int] = so.mapped_column(primary_key=True)
 
@@ -46,7 +70,7 @@ class Med_Lookup(db.Model):
 # MED_SUPPLY
 
 class Med_Supply(db.Model):
-    __tablename__ = "Med_Supply"
+    __tablename__ = "med_supply"
 
     supply_id: so.Mapped[int] = so.mapped_column(primary_key=True)
 
@@ -55,6 +79,7 @@ class Med_Supply(db.Model):
     quantity: so.Mapped[int] = so.mapped_column(sa.Integer)
     # to put: [intakes_left(supply_left/ dosage_strength)]
     expiration_date: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))
+
 
 # CIRCLE
 

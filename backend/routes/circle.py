@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from app import db
-from app.models import Circle, CircleMember, User
+from models import Circle, CircleMember, User
 
 circle_bp = Blueprint("circle", __name__, url_prefix="/api")
 

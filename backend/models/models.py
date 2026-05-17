@@ -66,6 +66,7 @@ class Prescription(db.Model):
     # relationships
     user: so.Mapped["User"] = so.relationship("User", back_populates="prescriptions")
     prescription_details: so.Mapped[List["Prescription_Detail"]] = so.relationship("Prescription_Detail", back_populates="prescription")
+    alarm: so.Mapped[Optional["Alarm"]] = so.relationship("Alarm", back_populates="prescription", uselist=False)
 
 
 # ── PRESCRIPTION_DETAIL ───────────────────────────────────────────────────────
@@ -87,7 +88,6 @@ class Prescription_Detail(db.Model):
     prescription: so.Mapped["Prescription"] = so.relationship("Prescription", back_populates="prescription_details")
     medicine: so.Mapped["Med_Lookup"] = so.relationship("Med_Lookup")
     user: so.Mapped["User"] = so.relationship("User", back_populates="prescription_details")
-    alarm: so.Mapped[Optional["Alarm"]] = so.relationship("Alarm", back_populates="prescription_detail", uselist=False)
 
 
 # ── ALARM ─────────────────────────────────────────────────────────────────────
@@ -99,10 +99,10 @@ class Alarm(db.Model):
     is_active: so.Mapped[bool] = so.mapped_column(sa.Boolean, default=True)
     onesignal_notification_id: so.Mapped[Optional[str]] = so.mapped_column(sa.String(256))
 
-    prescription_detail_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("prescription_details.prescription_detail_id"))
+    prescription_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("prescriptions.prescription_id"))
 
     # relationships
-    prescription_detail: so.Mapped["Prescription_Detail"] = so.relationship("Prescription_Detail", back_populates="alarm")
+    prescription: so.Mapped["Prescription"] = so.relationship("Prescription", back_populates="alarm")
 
 
 # ── MED_LOOKUP ────────────────────────────────────────────────────────────────
@@ -189,4 +189,5 @@ class CircleMember(db.Model):
         "User",
         primaryjoin="CircleMember.inviter_id == User.user_id",
         foreign_keys="[CircleMember.inviter_id]",
+        back_populates="sent_invites",
     )

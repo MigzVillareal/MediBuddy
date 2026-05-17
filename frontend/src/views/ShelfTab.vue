@@ -23,6 +23,7 @@
         <div class="med-card__info">
           <p class="med-card__brand">{{ med.brand_name }}</p>
           <p class="med-card__generic">{{ med.generic_name }}</p>
+          <span class="med-card__form">{{ med.dosage_strength }}</span>
           <span class="med-card__form">{{ med.dosage_form }}</span>
           <span class="med-card__form">{{ med.category }}</span>
           <span class="med-card__exp" v-if="med.expiration_date">Expiry: {{ med.expiration_date }}</span>

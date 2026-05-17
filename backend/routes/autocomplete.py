@@ -1,4 +1,5 @@
 from flask import Blueprint, request, jsonify
+from sqlalchemy import case
 from extensions import db
 from models import Med_Lookup
 
@@ -6,51 +7,49 @@ autocomplete_bp = Blueprint("autocomplete", __name__)
 
 @autocomplete_bp.route("/", strict_slashes=False)
 def autocomplete():
-    query = request.args.get("q", "").strip()
-
-    if not query:
+    q = request.args.get("q", "").strip()
+    if not q:
         return jsonify([])
 
-    like = f"%{query}%"
+    like      = f"%{q}%"
+    starts    = f"{q}%"
 
-    # Priority 1: brand_name or generic_name starts with the query
-    starts = Med_Lookup.query.filter(
-        db.or_(
-            Med_Lookup.brand_name.ilike(f"{query}%"),
-            Med_Lookup.generic_name.ilike(f"{query}%"),
+    # Single query — results ordered by relevance:
+    #   rank 1 → brand_name or generic_name starts with query
+    #   rank 2 → brand_name or generic_name contains query anywhere
+    #   rank 3 → dosage_form or category contains query (fallback)
+    priority = case(
+        (
+            db.or_(
+                Med_Lookup.brand_name.ilike(starts),
+                Med_Lookup.generic_name.ilike(starts),
+            ),
+            1,
+        ),
+        (
+            db.or_(
+                Med_Lookup.brand_name.ilike(like),
+                Med_Lookup.generic_name.ilike(like),
+            ),
+            2,
+        ),
+        else_=3,
+    )
+
+    results = (
+        Med_Lookup.query
+        .filter(
+            db.or_(
+                Med_Lookup.brand_name.ilike(like),
+                Med_Lookup.generic_name.ilike(like),
+                Med_Lookup.dosage_form.ilike(like),
+                Med_Lookup.category.ilike(like),
+            )
         )
-    ).limit(10).all()
-
-    # Priority 2: brand_name or generic_name contains the query (anywhere)
-    contains = []
-    if len(starts) < 10:
-        seen_ids = {m.lookup_id for m in starts}
-        extra = Med_Lookup.query.filter(
-            db.and_(
-                Med_Lookup.lookup_id.notin_(seen_ids),
-                db.or_(
-                    Med_Lookup.brand_name.ilike(like),
-                    Med_Lookup.generic_name.ilike(like),
-                )
-            )
-        ).limit(10 - len(starts)).all()
-        contains = extra
-
-    results = starts + contains
-
-    # Priority 3: fill remaining slots from dosage_form / category if still under 10
-    if len(results) < 10:
-        seen_ids = {m.lookup_id for m in results}
-        fallback = Med_Lookup.query.filter(
-            db.and_(
-                Med_Lookup.lookup_id.notin_(seen_ids),
-                db.or_(
-                    Med_Lookup.dosage_form.ilike(like),
-                    Med_Lookup.category.ilike(like),
-                )
-            )
-        ).limit(10 - len(results)).all()
-        results += fallback
+        .order_by(priority)
+        .limit(10)
+        .all()
+    )
 
     return jsonify([
         {

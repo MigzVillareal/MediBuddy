@@ -32,7 +32,7 @@
         <div
           class="result-card"
           v-for="med in filteredMeds"
-          :key="med.id"
+          :key="med.lookup_id"
           @click="selectMedicine(med)"
         >
           <div>
@@ -55,7 +55,11 @@
           <label class="label">Stock Quantity</label>
           <input class="input" type="number" min="1" v-model="form.stock" placeholder="e.g. 30" />
         </div>
- 
+        <div class="field">
+          <label class="label">Expiration Date</label>
+          <input class="input" type="date" v-model="form.expiration_date" />
+      </div>
+      
         <p class="error" v-if="formError">{{ formError }}</p>
  
         <button class="btn-primary" @click="confirmAdd">Add to My Medications</button>
@@ -77,7 +81,10 @@ const selectedMed  = ref(null)
 const filteredMeds = ref([])
 const formError    = ref('')
  
-const form = reactive({ stock: '' })
+const form = reactive({ 
+    stock: '',
+    expiration_date: ''
+})
  
 let timeout = null
  
@@ -113,10 +120,9 @@ async function confirmAdd() {
   try {
     
     await api.post('/meds/drug_stock', {
-      brand_name:   selectedMed.value.brand_name,
-      generic_name: selectedMed.value.generic_name,
-      dosage_form:  selectedMed.value.dosage_form,
-      quantity:     Number(form.stock),
+        lookup_id: selectedMed.value.lookup_id,
+        quantity:  Number(form.stock),
+        expiration_date: form.expiration_date || null
     })
  
     selectedMed.value = null

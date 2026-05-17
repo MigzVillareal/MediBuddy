@@ -33,6 +33,12 @@ class User(UserMixin, db.Model):
         foreign_keys="[CircleMember.user_id]",
         back_populates="user",
     )
+    sent_invites: so.Mapped[List["CircleMember"]] = so.relationship(
+        "CircleMember",
+        primaryjoin="CircleMember.inviter_id == User.user_id",
+        foreign_keys="[CircleMember.inviter_id]",
+        back_populates="inviter",
+    )
 
     def get_id(self):
         return str(self.user_id)
@@ -56,10 +62,6 @@ class Prescription(db.Model):
     detail: so.Mapped[Optional[str]] = so.mapped_column(sa.String(256))
 
     user_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("users.user_id"))
-
-    # relationships
-    user: so.Mapped["User"] = so.relationship("User", back_populates="prescriptions")
-    prescription_details: so.Mapped[List["Prescription_Detail"]] = so.relationship("Prescription_Detail", back_populates="prescription")
 
 
 # ── PRESCRIPTION_DETAIL ───────────────────────────────────────────────────────

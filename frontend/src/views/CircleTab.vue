@@ -56,6 +56,36 @@
         <span class="circle-card__arrow">›</span>
       </div>
     </div>
+    
+<!-- ── JOINED CIRCLES ──────────────────────────────────────────────── -->
+    <template v-if="joinedCircles.length > 0">
+      <div class="header-row" style="margin-top: 28px;">
+        <div>
+          <h2 class="section-title">Circles I've Joined</h2>
+          <p class="section-sub">Circles you are a member of.</p>
+        </div>
+      </div>
+      <div class="circle-grid">
+        <div
+          class="circle-card"
+          v-for="c in joinedCircles"
+          :key="c.circle_id"
+          @click="openDetail(c)"
+        >
+          <div class="circle-card__icon">{{ (c.circle_name || '?').charAt(0).toUpperCase() }}</div>
+          <div class="circle-card__body">
+            <p class="circle-card__name">{{ c.circle_name }}</p>
+            <p class="circle-card__meta">
+              {{ c.member_count }} member{{ c.member_count !== 1 ? 's' : '' }}
+              · owned by <strong>{{ c.owner_username }}</strong>
+              · <span class="perm-chip" :class="'perm--' + c.permission">{{ permLabel(c.permission) }}</span>
+            </p>
+          </div>
+          <span class="circle-card__arrow">›</span>
+        </div>
+      </div>
+    </template>
+    
 
     <!-- ── CREATE CIRCLE MODAL ─────────────────────────────────────────── -->
     <Teleport to="body">
@@ -189,13 +219,20 @@ const sentForCircle = computed(() =>
     : []
 )
 
+const joinedCircles = ref([])
+
 // ── HELPERS ────────────────────────────────────────────────────────
 function permLabel(p) {
   return p === 'canedit' ? '✏️ Can Edit' : '👁 View Only'
 }
 
 // ── INIT ───────────────────────────────────────────────────────────
-onMounted(() => Promise.all([loadCircles(), loadPendingInvites(), loadSentInvites()]))
+onMounted(() => Promise.all([loadCircles(), loadJoinedCircles(), loadPendingInvites(), loadSentInvites()]))
+
+async function loadJoinedCircles() {
+  try { joinedCircles.value = (await api.get('/circle/joined')).data }
+  catch (e) { console.error('loadJoinedCircles', e) }
+}
 
 async function loadCircles() {
   try { circles.value = (await api.get('/circle/mine')).data }

@@ -9,6 +9,7 @@
   },
   "routes": [
     { "src": "/api/(.*)", "dest": "/api/index.py" },
+    { "src": "/OneSignalSDKWorker.js", "dest": "/OneSignalSDKWorker.js" },
     { "src": "/assets/(.*)", "dest": "/assets/$1" },
     { "src": "/favicon.ico", "dest": "/favicon.ico" },
     { "src": "/(.*)", "dest": "/index.html" }

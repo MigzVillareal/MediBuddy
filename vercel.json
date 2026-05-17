@@ -8,7 +8,7 @@
     }
   },
   "routes": [
-    { "src": "/api/(.*)", "dest": "/index.py" },
+    { "src": "/api/(.*)", "dest": "/api/index.py" },
     { "src": "/assets/(.*)", "dest": "/assets/$1" },
     { "src": "/favicon.ico", "dest": "/favicon.ico" },
     { "src": "/(.*)", "dest": "/index.html" }

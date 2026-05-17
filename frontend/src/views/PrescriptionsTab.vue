@@ -175,6 +175,9 @@
 </template>
 
 <script setup>
+import { ref, reactive, onMounted } from 'vue'
+import api from '@/api'
+
 // ── STATE ──────────────────────────────────────────────────────────────
 const prescriptions  = ref([])
 const loading        = ref(false)

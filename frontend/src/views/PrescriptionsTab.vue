@@ -109,76 +109,95 @@
       </div>
     </Teleport>
 
-    <!-- ── ADD MEDICINE SHEET ─────────────────────────────────── -->
-    <Teleport to="body">
-      <div class="overlay" v-if="showAddMed" @click.self="showAddMed = false">
-        <div class="sheet sheet--tall">
-          <div class="sheet-handle"></div>
-          <h3 class="sheet-title">Add Medicine</h3>
-          <p class="err" v-if="addError">{{ addError }}</p>
+<!-- ADD MEDICINE SHEET ─────────────────────────────────────── -->
+<Teleport to="body">
+  <div class="overlay" v-if="showAddMed" @click.self="showAddMed = false">
+    <div class="sheet sheet--tall">
+      <div class="sheet-handle"></div>
+      <h3 class="sheet-title">Add Medicine</h3>
+      <p class="err" v-if="addError">{{ addError }}</p>
 
-          <!-- search -->
-          <label class="field-label">Search Medicine *</label>
-          <input class="field" placeholder="Type brand or generic name…" v-model="medSearch" @input="searchMed" />
-          <!-- API search results -->
-          <div class="search-results" v-if="medResults.length > 0 && !chosenMed">
-            <div class="search-result" v-for="m in medResults" :key="m.lookup_id" @click="pickMed(m)">
-              <p class="sr__brand">{{ m.brand_name }}</p>
-              <p class="sr__generic">{{ m.generic_name }} · {{ m.dosage_form }}</p>
-            </div>
-          </div>
+      <!-- STEP 1: Search (always visible) -->
+      <label class="field-label">Search Medicine *</label>
+      <input
+        class="field"
+        placeholder="Type brand or generic name…"
+        v-model="medSearch"
+        @input="searchMed"
+      />
 
-          <div class="chosen-med" v-if="chosenMed">
-            <p class="chosen-med__name">✅ {{ chosenMed.brand_name }}</p>
-            <p class="chosen-med__sub">{{ chosenMed.generic_name }} · {{ chosenMed.dosage_form }}</p>
-            <button class="btn-clear" @click="clearMed">Change</button>
-          </div>
-
-          <!-- schedule -->
-          <label class="field-label" style="margin-top:12px">Start Date *</label>
-          <input class="field" type="date" v-model="detailForm.date_start" />
-
-          <label class="field-label">End Date</label>
-          <input class="field" type="date" v-model="detailForm.date_end" />
-
-          <label class="field-label">Times (add each time then press +)</label>
-          <div class="time-input-row">
-            <input class="field field--sm" type="time" v-model="timeInput" />
-            <button class="btn-add-time" @click="addTime">+</button>
-          </div>
-          <div class="time-chips" v-if="detailForm.times.length > 0">
-            <span class="time-chip" v-for="(t, i) in detailForm.times" :key="i">
-              {{ t }} <button class="chip-remove" @click="removeTime(i)">×</button>
-            </span>
-          </div>
-
-          <label class="field-label" style="margin-top:12px">Days Taken *</label>
-          <div class="day-grid">
-            <button
-              class="day-btn"
-              v-for="opt in dayOptions"
-              :key="opt.value"
-              :class="{ 'day-btn--active': detailForm.days_taken === opt.value }"
-              @click="detailForm.days_taken = opt.value"
-            >{{ opt.label }}</button>
-          </div>
-
-          <button class="btn-primary" @click="addDetail" :disabled="isAddingDetail" style="margin-top:16px">
-            {{ isAddingDetail ? 'Adding…' : 'Add & Set Alarm' }}
-          </button>
-          <button class="btn-ghost" @click="showAddMed = false">Cancel</button>
+      <!-- Results dropdown -->
+      <div class="search-results" v-if="medResults.length > 0 && !chosenMed">
+        <div
+          class="search-result"
+          v-for="m in medResults"
+          :key="m.lookup_id"
+          @click="pickMed(m)"
+        >
+          <p class="sr__brand">{{ m.brand_name }}</p>
+          <p class="sr__generic">{{ m.generic_name }} · {{ m.dosage_form }}</p>
         </div>
       </div>
-    </Teleport>
+
+      <!-- Chosen medicine pill -->
+      <div class="chosen-med" v-if="chosenMed">
+        <div>
+          <p class="chosen-med__name">✅ {{ chosenMed.brand_name }}</p>
+          <p class="chosen-med__sub">{{ chosenMed.generic_name }} · {{ chosenMed.dosage_form }}</p>
+        </div>
+        <button class="btn-clear" @click="clearMed">Change</button>
+      </div>
+
+      <!-- STEP 2: Schedule fields — only shown after medicine is chosen -->
+      <template v-if="chosenMed">
+        <label class="field-label" style="margin-top:12px">Start Date *</label>
+        <input class="field" type="date" v-model="detailForm.date_start" />
+
+        <label class="field-label">End Date</label>
+        <input class="field" type="date" v-model="detailForm.date_end" />
+
+        <label class="field-label">Times (add each time then press +)</label>
+        <div class="time-input-row">
+          <input class="field field--sm" type="time" v-model="timeInput" />
+          <button class="btn-add-time" @click="addTime">+</button>
+        </div>
+        <div class="time-chips" v-if="detailForm.times.length > 0">
+          <span class="time-chip" v-for="(t, i) in detailForm.times" :key="i">
+            {{ t }} <button class="chip-remove" @click="removeTime(i)">×</button>
+          </span>
+        </div>
+
+        <label class="field-label" style="margin-top:12px">Days Taken *</label>
+        <div class="day-grid">
+          <button
+            class="day-btn"
+            v-for="opt in dayOptions"
+            :key="opt.value"
+            :class="{ 'day-btn--active': detailForm.days_taken === opt.value }"
+            @click="detailForm.days_taken = opt.value"
+          >{{ opt.label }}</button>
+        </div>
+
+        <button class="btn-primary" @click="addDetail" :disabled="isAddingDetail" style="margin-top:16px">
+          {{ isAddingDetail ? 'Adding…' : 'Add & Set Alarm' }}
+        </button>
+      </template>
+
+      <button class="btn-ghost" @click="showAddMed = false">Cancel</button>
+    </div>
+  </div>
+</Teleport>
 
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, nextTick } from 'vue'
 import api from '@/api'
 
 // ── STATE ──────────────────────────────────────────────────────────────
+const medSearchInput  = ref(null)
+const searchResultsEl = ref(null)
 const prescriptions  = ref([])
 const loading        = ref(false)
 const showCreate     = ref(false)
@@ -310,6 +329,9 @@ function searchMed() {
   searchTimeout = setTimeout(async () => {
     try {
       medResults.value = (await api.get('/autocomplete/', { params: { q: medSearch.value.trim() } })).data
+      // scroll results into view on mobile
+      await nextTick()
+      searchResultsEl.value?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
     } catch (e) { medResults.value = [] }
   }, 200)
 }
@@ -430,7 +452,8 @@ async function addDetail() {
 .btn-add-med:hover { background:var(--color-primary); color:#fff; }
 
 /* search */
-.search-results { background:var(--color-white); border:2px solid var(--color-border); border-radius:12px; overflow:hidden; }
+.search-results { background: var(--color-white); border: 2px solid var(--color-border); border-radius: 12px; overflow: hidden; max-height: 220px; overflow-y: auto;
+}
 .search-result { padding:12px 14px; cursor:pointer; border-bottom:1px solid var(--color-border); transition:background .15s; }
 .search-result:last-child { border-bottom:none; }
 .search-result:hover { background:var(--color-primary-light); }

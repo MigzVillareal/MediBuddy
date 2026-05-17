@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify, make_response
 from werkzeug.security import generate_password_hash
-from app.models import User
-from app.extensions import db
+from models import User
+from extensions import db
 from flask_login import login_user, login_required, logout_user, current_user
 import sqlalchemy as sa
 
@@ -16,17 +16,12 @@ def register():
 
     if not username or not password:
         return jsonify({"error": "Missing fields"}), 400
-        return jsonify({"error": "username and password are required"}), 400
-
+        
     if User.query.filter_by(username=username).first():
         return jsonify({"error": "Username already exists"}), 400
 
     user = User(username=username)
     user.set_password(password)
-    user = User(
-        username=username,
-        password_hash=generate_password_hash(password),
-    )
 
     db.session.add(user)
     db.session.commit()
@@ -55,7 +50,7 @@ def login():
     return jsonify({
         "message": "Login successful",
         "user": {
-            "id": user.id,
+            "id": user.user_id,
             "username": user.username
         }
     }), 200
@@ -70,7 +65,7 @@ def logout():
 def get_me():
     if current_user.is_authenticated:
         return jsonify({
-            "id": current_user.id,
+            "id": current_user.user_id,
             "username": current_user.username,
             "first_name": current_user.first_name,
             "last_name": current_user.last_name,

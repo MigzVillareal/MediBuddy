@@ -62,7 +62,7 @@ class Med_Lookup(db.Model):
 
     lookup_id: so.Mapped[int] = so.mapped_column(primary_key=True)
 
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.user_id"), nullable=False)
 
     brand_name: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))
     generic_name: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))
@@ -104,5 +104,5 @@ class CircleMember(db.Model):
 
     circle_member_id = db.Column(db.Integer, primary_key=True)
 
-    circle_id = db.Column(db.Integer, db.ForeignKey("circles.id"))
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
+    circle_id = db.Column(db.Integer, db.ForeignKey("circles.user_id"))
+    user_id = db.Column(db.Integer, db.ForeignKey("users.user_id"))

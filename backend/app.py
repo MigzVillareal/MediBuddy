@@ -3,8 +3,8 @@ from flask_cors import CORS
 
 from config import Config
 from extensions import db
-from routes.auth_routes import auth_bp
-from routes.user_routes import user_bp
+from extensions import db, login
+from routes import register_routes
 
 def create_app():
     # initialize flask object
@@ -22,11 +22,6 @@ def create_app():
         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allow_headers=["Content-Type", "Authorization"],
     )
-
-    app.register_blueprint(auth_bp)
-    app.register_blueprint(user_bp)
-    # app.register_blueprint(lookup_bp)
-    # app.register_blueprint(drug_bp)git s
 
     return app
 

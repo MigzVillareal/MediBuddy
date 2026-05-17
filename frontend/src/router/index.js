@@ -8,7 +8,7 @@ import api                from '@/api'
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-    { path: '/',                component: HomePage,           meta: {public: true} },
+    { path: '/',                component: LoginPage,           meta: {public: true} },
     { path: '/login',           component: LoginPage,          meta: {public: true} },
     { path: '/register',        component: RegisterPage,       meta: {public: true} },
     { path: '/home',            component: HomePage,           meta: {public: false} },

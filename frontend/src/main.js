@@ -2,22 +2,13 @@ import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
 import './assets/main.css'
+import OneSignalVuePlugin from 'onesignal-vue3'
 
-window.OneSignalDeferred = window.OneSignalDeferred || []
-OneSignalDeferred.push(async function(OneSignal) {
-    await OneSignal.init({
-        appId: "6c085cb1-19d4-42fa-8a98-35eb7367f422",
-        notifyButton: {
-            enable: true,
-        },
-        serviceWorkerPath: "/OneSignalSDKWorker.js",
-    })
+const app = createApp(App)
+
+app.use(router)
+app.use(OneSignalVuePlugin, {
+    appId: '6c085cb1-19d4-42fa-8a98-35eb7367f422',
 })
 
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/OneSignalSDKWorker.js')
-        .then(reg => console.log('SW registered:', reg))
-        .catch(err => console.log('SW registration failed:', err))
-}
-
-createApp(App).use(router).mount("#app")
+app.mount("#app")

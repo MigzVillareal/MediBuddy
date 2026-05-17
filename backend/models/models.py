@@ -63,6 +63,10 @@ class Prescription(db.Model):
 
     user_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("users.user_id"))
 
+    # relationships
+    user: so.Mapped["User"] = so.relationship("User", back_populates="prescriptions")
+    prescription_details: so.Mapped[List["Prescription_Detail"]] = so.relationship("Prescription_Detail", back_populates="prescription")
+
 
 # ── PRESCRIPTION_DETAIL ───────────────────────────────────────────────────────
 
@@ -111,10 +115,6 @@ class Med_Lookup(db.Model):
     generic_name: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))
     dosage_strength: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))
     dosage_form: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))
-
-    # relationships
-    prescription_details: so.Mapped[List["Prescription_Detail"]] = so.relationship("Prescription_Detail", back_populates="medicine")
-    med_supplies: so.Mapped[List["Med_Supply"]] = so.relationship("Med_Supply", back_populates="medicine")
 
 
 # ── MED_SUPPLY ────────────────────────────────────────────────────────────────

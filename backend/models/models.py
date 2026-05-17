@@ -85,7 +85,7 @@ class Prescription_Detail(db.Model):
 
     # relationships
     prescription: so.Mapped["Prescription"] = so.relationship("Prescription", back_populates="prescription_details")
-    medicine: so.Mapped["Med_Lookup"] = so.relationship("Med_Lookup", back_populates="prescription_details")
+    medicine: so.Mapped["Med_Lookup"] = so.relationship("Med_Lookup")
     user: so.Mapped["User"] = so.relationship("User", back_populates="prescription_details")
     alarm: so.Mapped[Optional["Alarm"]] = so.relationship("Alarm", back_populates="prescription_detail", uselist=False)
 
@@ -130,7 +130,7 @@ class Med_Supply(db.Model):
     user_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("users.user_id"))
 
     # relationships
-    medicine: so.Mapped["Med_Lookup"] = so.relationship("Med_Lookup", back_populates="med_supplies")
+    medicine: so.Mapped["Med_Lookup"] = so.relationship("Med_Lookup")
     user: so.Mapped["User"] = so.relationship("User", back_populates="med_supplies")
 
     @property

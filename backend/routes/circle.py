@@ -27,6 +27,30 @@ def get_my_circles():
         })
     return jsonify(result)
 
+@circle_bp.route("/joined", methods=["GET"])
+@login_required
+def get_joined_circles():
+    """Circles the current user is an accepted member of (but does NOT own)."""
+    rows = CircleMember.query.filter_by(
+        user_id=current_user.user_id, status="accepted"
+    ).all()
+    result = []
+    for m in rows:
+        circle = db.session.get(Circle, m.circle_id)
+        if not circle or circle.owner_id == current_user.user_id:
+            continue          # skip circles they own (already in /mine)
+        owner = db.session.get(User, circle.owner_id)
+        result.append({
+            "circle_id":    circle.circle_id,
+            "circle_name":  circle.circle_name,
+            "owner_username": owner.username if owner else "Unknown",
+            "permission":   m.permission,
+            "member_count": CircleMember.query.filter_by(
+                                circle_id=circle.circle_id, status="accepted"
+                            ).count(),
+        })
+    return jsonify(result)
+
 
 @circle_bp.route("/create", methods=["POST"])
 @login_required

@@ -9,7 +9,6 @@
       <ShelfTab          v-if="activeTab === 'home'"          />
       <PrescriptionsTab  v-if="activeTab === 'prescriptions'" />
       <CircleTab         v-if="activeTab === 'circle'"        />
-      <AlarmsTab         v-if="activeTab === 'alarms'"        />
       <ProfileTab        v-if="activeTab === 'profile'"       />
     </main>
 
@@ -26,10 +25,6 @@
         <span class="bottom-nav__icon">👨‍👩‍👧</span>
         <span class="bottom-nav__label">Circle</span>
       </button>
-      <button class="bottom-nav__item" :class="{ 'bottom-nav__item--active': activeTab === 'alarms' }"  @click="activeTab = 'alarms'">
-        <span class="bottom-nav__icon">🔔</span>
-        <span class="bottom-nav__label">Alarms</span>
-      </button>
       <button class="bottom-nav__item" :class="{ 'bottom-nav__item--active': activeTab === 'profile' }" @click="activeTab = 'profile'">
         <span class="bottom-nav__icon">👤</span>
         <span class="bottom-nav__label">Profile</span>
@@ -43,7 +38,6 @@ import { ref } from 'vue'
 import ShelfTab          from './ShelfTab.vue'
 import PrescriptionsTab  from './PrescriptionsTab.vue'
 import CircleTab         from './CircleTab.vue'
-import AlarmsTab         from './AlarmsTab.vue'
 import ProfileTab        from './ProfileTab.vue'
 
 // Tracks which tab is currently visible

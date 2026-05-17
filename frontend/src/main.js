@@ -2,7 +2,7 @@ import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
 import './assets/main.css'
-import OneSignalVuePlugin from 'onesignal-vue3'
+import OneSignalVuePlugin from '@onesignal/onesignal-vue3'
 
 const app = createApp(App)
 

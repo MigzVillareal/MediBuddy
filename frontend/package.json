@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@onesignal/onesignal-vue3": "^2.5.0",
     "axios": "^1.15.0",
     "vue": "^3.5.31",
     "vue-router": "^5.0.4"

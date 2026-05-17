@@ -6,7 +6,7 @@
     </header>
 
     <main class="content">
-      <HomeTab    v-if="activeTab === 'home'"    />
+      <ShelfTab   v-if="activeTab === 'home'"    />
       <CircleTab  v-if="activeTab === 'circle'"  />
       <AlarmsTab  v-if="activeTab === 'alarms'"  />
       <ProfileTab v-if="activeTab === 'profile'" />
@@ -14,8 +14,8 @@
 
     <nav class="bottom-nav">
       <button class="bottom-nav__item" :class="{ 'bottom-nav__item--active': activeTab === 'home' }"    @click="activeTab = 'home'">
-        <span class="bottom-nav__icon">🏠</span>
-        <span class="bottom-nav__label">Home</span>
+        <span class="bottom-nav__icon">🗂</span>
+        <span class="bottom-nav__label">Shelf</span>
       </button>
       <button class="bottom-nav__item" :class="{ 'bottom-nav__item--active': activeTab === 'circle' }"  @click="activeTab = 'circle'">
         <span class="bottom-nav__icon">👨‍👩‍👧</span>
@@ -35,7 +35,7 @@
 
 <script setup>
 import { ref } from 'vue'
-import HomeTab    from './HomeTab.vue'
+import ShelfTab   from './ShelfTab.vue'
 import CircleTab  from './CircleTab.vue'
 import AlarmsTab  from './AlarmsTab.vue'
 import ProfileTab from './ProfileTab.vue'

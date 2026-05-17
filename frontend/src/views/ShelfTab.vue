@@ -1,6 +1,6 @@
 <template>
   <div class="tab">
-    <h2 class="section-title">My Medications</h2>
+    <h2 class="section-title">My Shelf</h2>
 
     <!-- Loading state -->
     <div class="hint" v-if="loading">

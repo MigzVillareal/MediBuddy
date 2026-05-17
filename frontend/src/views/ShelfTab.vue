@@ -17,20 +17,22 @@
 
     <!-- Medication cards -->
     <div class="med-list" v-else>
-      <div class="med-card" v-for="med in medications" :key="med.id">
+      <div class="med-card" v-for="med in medications" :key="med.supply_id">
 
         <!-- Name + details -->
         <div class="med-card__info">
           <p class="med-card__brand">{{ med.brand_name }}</p>
           <p class="med-card__generic">{{ med.generic_name }}</p>
           <span class="med-card__form">{{ med.dosage_form }}</span>
+          <span class="med-card__form">{{ med.category }}</span>
+          <span class="med-card__exp" v-if="med.expiration_date">Expiry: {{ med.expiration_date }}</span>
         </div>
 
         <!-- Stock controls -->
         <div class="med-card__controls">
           <!-- Stock badge — turns red when 5 or below -->
-          <span class="stock-badge" :class="{ 'stock-badge--low': med.quantity <= 5 }">
-            {{ med.quantity }} left
+          <span class="stock-badge" :class="{ 'stock-badge--low': med.supply_stock <= 5 }">
+            {{ med.supply_stock }} left
           </span>
 
           <div class="qty-row">
@@ -38,7 +40,7 @@
             <button
               class="qty-btn"
               @click="changeStock(med, -1)"
-              :disabled="med.quantity <= 0"
+              :disabled="med.supply_stock <= 0"
             >−</button>
 
             <!-- Plus -->
@@ -81,17 +83,17 @@ async function fetchMedications() {
 
 // ── Increment or decrement stock by 1 ──────────────────────────────────────
 async function changeStock(med, delta) {
-  const newQty = med.quantity + delta
+  const newQty = med.supply_stock + delta
   if (newQty < 0) return
 
   // Optimistic update — update UI immediately, then sync to backend
-  med.quantity = newQty
+  med.supply_stock = newQty
 
   try {
-    await api.patch(`/meds/drug_stock/${med.id}`, { quantity: newQty })
+    await api.patch(`/meds/drug_stock/${med.supply_id}`, { supply_stock: newQty })
   } catch (err) {
     // Revert if the request failed
-    med.quantity -= delta
+    med.supply_stock -= delta
     console.error('Failed to update stock:', err)
   }
 }
@@ -99,10 +101,10 @@ async function changeStock(med, delta) {
 // ── Delete a medication ────────────────────────────────────────────────────
 async function deleteMed(med) {
   // Remove from list immediately for snappy UI
-  medications.value = medications.value.filter(m => m.id !== med.id)
+  medications.value = medications.value.filter(m => m.id !== med.supply_id)
 
   try {
-    await api.delete(`/meds/drug_stock/${med.id}`)
+    await api.delete(`/meds/drug_stock/${med.supply_id}`)
   } catch (err) {
     // Put it back if delete failed
     medications.value.push(med)
@@ -154,10 +156,23 @@ onMounted(fetchMedications)
 .med-card__form {
   display: inline-block;
   margin-top: 6px;
+  margin-right: 6px;
   font-size: 11px;
   font-weight: 700;
   background: var(--color-primary-light);
   color: var(--color-primary-dark);
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+
+.med-card__exp {
+  display: inline-block;
+  margin-top: 6px;
+  margin-right: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--color-primary-muted);
+  color: var(--color-primary-muted);
   padding: 2px 8px;
   border-radius: 20px;
 }

@@ -39,6 +39,7 @@
             <p class="result-card__brand">{{ med.brand_name }}</p>
             <p class="result-card__name">{{ med.generic_name }}</p>
             <span class="result-card__form">{{ med.dosage_form }}</span>
+            <span class="result-card__form">{{ med.category }}</span>
           </div>
           <span class="result-card__arrow">›</span>
         </div>
@@ -53,7 +54,7 @@
  
         <div class="field">
           <label class="label">Stock Quantity</label>
-          <input class="input" type="number" min="1" v-model="form.stock" placeholder="e.g. 30" />
+          <input class="input" type="number" min="0" v-model="form.stock" placeholder="e.g. 30" />
         </div>
         <div class="field">
           <label class="label">Expiration Date</label>
@@ -111,17 +112,12 @@ function selectMedicine(med) {
  
 async function confirmAdd() {
   formError.value = ''
- 
-  if (!form.stock || Number(form.stock) < 1) {
-    formError.value = 'Please enter a valid stock quantity.'
-    return
-  }
 
   try {
     
     await api.post('/meds/drug_stock', {
         lookup_id: selectedMed.value.lookup_id,
-        quantity:  Number(form.stock),
+        supply_stock:  Number(form.stock),
         expiration_date: form.expiration_date || null
     })
  
@@ -152,7 +148,7 @@ async function confirmAdd() {
 .result-card:active { transform: scale(0.98); }
 .result-card__brand { font-size: 15px; font-weight: 700; color: var(--color-text-dark); }
 .result-card__name  { font-size: 12px; color: var(--color-text-muted); margin-top: 2px; }
-.result-card__form  { display: inline-block; margin-top: 6px; font-size: 11px; font-weight: 700; background: var(--color-primary-light); color: var(--color-primary-dark); padding: 2px 8px; border-radius: 20px; }
+.result-card__form  { display: inline-block; margin-top: 6px; margin-right: 6px; font-size: 11px; font-weight: 700; background: var(--color-primary-light); color: var(--color-primary-dark); padding: 2px 8px; border-radius: 20px; }
 .result-card__arrow { font-size: 22px; color: var(--color-primary); }
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: flex; align-items: flex-end; z-index: 100; }
 .modal { background: var(--color-white); border-radius: 24px 24px 0 0; padding: 28px 24px 40px; width: 100%; }

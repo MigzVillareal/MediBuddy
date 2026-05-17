@@ -16,6 +16,7 @@ def autocomplete():
             Med_Lookup.brand_name.ilike(f"%{query}%"),
             Med_Lookup.generic_name.ilike(f"%{query}%"),
             Med_Lookup.dosage_form.ilike(f"%{query}%"),
+            Med_Lookup.category.ilike(f"%{query}%"),
         )
     ).limit(10).all()
 

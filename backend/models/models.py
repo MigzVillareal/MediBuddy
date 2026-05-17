@@ -58,7 +58,7 @@ class Prescription_Detail(db.Model):
 
 # ALARM
 
-class ALARM
+# class ALARM
 
 
 # MED_LOOKUP

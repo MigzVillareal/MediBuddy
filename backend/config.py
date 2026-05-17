@@ -1,7 +1,9 @@
 import os
+from dotenv import load_dotenv
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 
+load_dotenv()
 
 LOCAL_DEV_CORS_ORIGINS = [
     "http://127.0.0.1:5000",

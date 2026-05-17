@@ -7,13 +7,20 @@ autocomplete_bp = Blueprint("autocomplete", __name__, url_prefix="/api")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CSV_PATH = os.path.join(BASE_DIR, "..", "data", "drug_lookup_table.csv")
 
+DATA = None
 
 def load_drugs():
-    items = []
+    global DATA
+    if DATA is not None:
+        return DATA
+    
+    if not os.path.exists(CSV_PATH):
+        DATA = []
+        return DATA
 
+    items = []
     with open(CSV_PATH, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
-
         for row in reader:
             items.append({
                 "generic_name": row.get("Generic Name") or row.get("generic_name"),
@@ -21,11 +28,8 @@ def load_drugs():
                 "dosage_strength": row.get("Dosage Strength") or row.get("dosage_strength"),
                 "dosage_form": row.get("Dosage Form") or row.get("dosage_form"),
             })
-
-    return items
-
-
-DATA = load_drugs()
+    DATA = items
+    return DATA
 
 
 @autocomplete_bp.route("/autocomplete")
@@ -36,8 +40,7 @@ def autocomplete():
         return jsonify([])
 
     results = []
-
-    for drug in DATA:
+    for drug in load_drugs():
         brand = (drug.get("brand_name") or "").lower()
         generic = (drug.get("generic_name") or "").lower()
         form = (drug.get("dosage_form") or "").lower()

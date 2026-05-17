@@ -51,11 +51,14 @@ class Prescription_Detail(db.Model):
 
     prescription_detail_id: so.Mapped[int] = so.mapped_column(primary_key=True)
 
-    Description: so.Mapped[str] = so.mapped_column(sa.String(120))
-    # to put: duration(date_start, date_end)
-    # to put: {schedule(set_day, set_time,set_frequency)}
+    Description: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))
+    date_start: so.Mapped[Optional[sa.DateTime]] = so.mapped_column(sa.DateTime, nullable=True)
+    date_end: so.Mapped[Optional[sa.DateTime]] = so.mapped_column(sa.DateTime, nullable=True)
 
-#
+
+# ALARM
+
+class ALARM
 
 
 # MED_LOOKUP

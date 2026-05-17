@@ -6,4 +6,5 @@ from .models import (
     Med_Supply,
     Circle,
     CircleMember,
+    CircleInvite,
 )

@@ -93,21 +93,41 @@ class Med_Supply(db.Model):
 
 
 # CIRCLE
+# owner_id identifies who created/owns the circle and can manage members/permissions
 
 class Circle(db.Model):
     __tablename__ = "circles"
 
     circle_id = db.Column(db.Integer, primary_key=True)
     circle_name = db.Column(db.String(100), nullable=False)
+    owner_id = db.Column(db.Integer, db.ForeignKey("users.user_id"), nullable=False)
 
-    members = db.relationship("CircleMember", backref="circle", lazy=True)
+    members = db.relationship("CircleMember", backref="circle", lazy=True, cascade="all, delete-orphan")
+    invites = db.relationship("CircleInvite", backref="circle", lazy=True, cascade="all, delete-orphan")
 
 
 # CIRCLE_MEMBER
+# Stores accepted members only; permission = 'canview' | 'canedit'
 
 class CircleMember(db.Model):
     __tablename__ = "circle_members"
 
     circle_member_id = db.Column(db.Integer, primary_key=True)
-    circle_id = db.Column(db.Integer, db.ForeignKey("circles.circle_id"))
-    user_id = db.Column(db.Integer, db.ForeignKey("users.user_id"))
+    circle_id = db.Column(db.Integer, db.ForeignKey("circles.circle_id"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.user_id"), nullable=False)
+    permission = db.Column(db.String(20), nullable=False, default="canview")
+
+
+# CIRCLE_INVITE
+# Represents a pending invite from a circle owner to another user.
+# status: 'pending' | 'accepted' | 'rejected'
+
+class CircleInvite(db.Model):
+    __tablename__ = "circle_invites"
+
+    invite_id = db.Column(db.Integer, primary_key=True)
+    circle_id = db.Column(db.Integer, db.ForeignKey("circles.circle_id"), nullable=False)
+    inviter_id = db.Column(db.Integer, db.ForeignKey("users.user_id"), nullable=False)
+    invitee_id = db.Column(db.Integer, db.ForeignKey("users.user_id"), nullable=False)
+    permission = db.Column(db.String(20), nullable=False, default="canview")
+    status = db.Column(db.String(20), nullable=False, default="pending")

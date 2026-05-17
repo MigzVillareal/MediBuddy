@@ -7,7 +7,6 @@
       "runtime": "@vercel/python@4.3.0"
     }
   },
-  "builds": [{"src": "app.py", "use": @vercel/python}],
   "routes": [
     { "src": "/api/(.*)", "dest": "/api/index.py" },
     { "src": "/assets/(.*)", "dest": "/assets/$1" },

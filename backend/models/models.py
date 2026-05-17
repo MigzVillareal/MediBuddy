@@ -111,10 +111,11 @@ class Med_Lookup(db.Model):
     __tablename__ = "med_lookup"
 
     lookup_id: so.Mapped[int] = so.mapped_column(primary_key=True)
-    brand_name: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))
-    generic_name: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))
-    dosage_strength: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))
-    dosage_form: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))
+    brand_name: so.Mapped[Optional[str]] = so.mapped_column(sa.Text)
+    generic_name: so.Mapped[Optional[str]] = so.mapped_column(sa.Text)
+    dosage_strength: so.Mapped[Optional[str]] = so.mapped_column(sa.Text)
+    dosage_form: so.Mapped[Optional[str]] = so.mapped_column(sa.Text)
+    category: so.Mapped[Optional[str]] = so.mapped_column(sa.Text)
 
 
 # ── MED_SUPPLY ────────────────────────────────────────────────────────────────

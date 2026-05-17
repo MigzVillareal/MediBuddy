@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 import sqlalchemy as sa
 import sqlalchemy.orm as so
 from extensions import db
@@ -6,20 +6,33 @@ from flask_login import UserMixin
 from extensions import login
 from werkzeug.security import check_password_hash, generate_password_hash
 
+
 @login.user_loader
 def load_user(id):
     return db.session.get(User, int(id))
 
-# USER
+
+# ── USER ──────────────────────────────────────────────────────────────────────
 
 class User(UserMixin, db.Model):
     __tablename__ = "users"
 
-    user_id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(36), unique=True, index=True, nullable=False)
-    password_hash = db.Column(db.String(256))
-    first_name = db.Column(db.String(64), nullable=True)
-    last_name = db.Column(db.String(64), nullable=True)
+    user_id: so.Mapped[int] = so.mapped_column(primary_key=True)
+    username: so.Mapped[str] = so.mapped_column(sa.String(36), unique=True, index=True)
+    password_hash: so.Mapped[Optional[str]] = so.mapped_column(sa.String(256))
+    first_name: so.Mapped[Optional[str]] = so.mapped_column(sa.String(64))
+    last_name: so.Mapped[Optional[str]] = so.mapped_column(sa.String(64))
+
+    # relationships
+    prescriptions: so.Mapped[List["Prescription"]] = so.relationship("Prescription", back_populates="user")
+    prescription_details: so.Mapped[List["Prescription_Detail"]] = so.relationship("Prescription_Detail", back_populates="user")
+    med_supplies: so.Mapped[List["Med_Supply"]] = so.relationship("Med_Supply", back_populates="user")
+    circle_memberships: so.Mapped[List["CircleMember"]] = so.relationship(
+        "CircleMember",
+        primaryjoin="CircleMember.user_id == User.user_id",
+        foreign_keys="[CircleMember.user_id]",
+        back_populates="user",
+    )
 
     def get_id(self):
         return str(self.user_id)
@@ -31,103 +44,146 @@ class User(UserMixin, db.Model):
         return check_password_hash(self.password_hash, password)
 
 
-# PRESCRIPTION
+# ── PRESCRIPTION ──────────────────────────────────────────────────────────────
 
 class Prescription(db.Model):
     __tablename__ = "prescriptions"
 
     prescription_id: so.Mapped[int] = so.mapped_column(primary_key=True)
+    name: so.Mapped[str] = so.mapped_column(sa.String(120))
+    date: so.Mapped[Optional[sa.Date]] = so.mapped_column(sa.Date)
+    doctor: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))
+    detail: so.Mapped[Optional[str]] = so.mapped_column(sa.String(256))
 
-    Description: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))
-    Date: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))
-    Doctor: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))
-    Detail: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))
+    user_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("users.user_id"))
+
+    # relationships
+    user: so.Mapped["User"] = so.relationship("User", back_populates="prescriptions")
+    prescription_details: so.Mapped[List["Prescription_Detail"]] = so.relationship("Prescription_Detail", back_populates="prescription")
 
 
-# PRESCRIPTION_DETAIL
+# ── PRESCRIPTION_DETAIL ───────────────────────────────────────────────────────
 
 class Prescription_Detail(db.Model):
     __tablename__ = "prescription_details"
 
     prescription_detail_id: so.Mapped[int] = so.mapped_column(primary_key=True)
+    date_start: so.Mapped[sa.Date] = so.mapped_column(sa.Date)
+    date_end: so.Mapped[Optional[sa.Date]] = so.mapped_column(sa.Date)
+    time_taken: so.Mapped[str] = so.mapped_column(sa.String(100))   # "08:00,14:00,20:00"
+    days_taken: so.Mapped[str] = so.mapped_column(sa.String(20))    # "MWF", "TTH", "daily"
 
-    Description: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))
-    date_start: so.Mapped[Optional[sa.DateTime]] = so.mapped_column(sa.DateTime, nullable=True)
-    date_end: so.Mapped[Optional[sa.DateTime]] = so.mapped_column(sa.DateTime, nullable=True)
+    prescription_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("prescriptions.prescription_id"))
+    lookup_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("med_lookup.lookup_id"))
+    user_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("users.user_id"))
+
+    # relationships
+    prescription: so.Mapped["Prescription"] = so.relationship("Prescription", back_populates="prescription_details")
+    medicine: so.Mapped["Med_Lookup"] = so.relationship("Med_Lookup", back_populates="prescription_details")
+    user: so.Mapped["User"] = so.relationship("User", back_populates="prescription_details")
+    alarm: so.Mapped[Optional["Alarm"]] = so.relationship("Alarm", back_populates="prescription_detail", uselist=False)
 
 
-# ALARM
+# ── ALARM ─────────────────────────────────────────────────────────────────────
 
-# class ALARM
+class Alarm(db.Model):
+    __tablename__ = "alarms"
+
+    alarm_id: so.Mapped[int] = so.mapped_column(primary_key=True)
+    is_active: so.Mapped[bool] = so.mapped_column(sa.Boolean, default=True)
+    onesignal_notification_id: so.Mapped[Optional[str]] = so.mapped_column(sa.String(256))
+
+    prescription_detail_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("prescription_details.prescription_detail_id"))
+
+    # relationships
+    prescription_detail: so.Mapped["Prescription_Detail"] = so.relationship("Prescription_Detail", back_populates="alarm")
 
 
-# MED_LOOKUP
+# ── MED_LOOKUP ────────────────────────────────────────────────────────────────
 
 class Med_Lookup(db.Model):
     __tablename__ = "med_lookup"
 
     lookup_id: so.Mapped[int] = so.mapped_column(primary_key=True)
-
-    user_id = db.Column(db.Integer, db.ForeignKey("users.user_id"), nullable=False)
-
     brand_name: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))
     generic_name: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))
     dosage_strength: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))
     dosage_form: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))
 
+    # relationships
+    prescription_details: so.Mapped[List["Prescription_Detail"]] = so.relationship("Prescription_Detail", back_populates="medicine")
+    med_supplies: so.Mapped[List["Med_Supply"]] = so.relationship("Med_Supply", back_populates="medicine")
 
-# MED_SUPPLY
+
+# ── MED_SUPPLY ────────────────────────────────────────────────────────────────
 
 class Med_Supply(db.Model):
     __tablename__ = "med_supply"
 
-    id: so.Mapped[int] = so.mapped_column(primary_key=True)
+    supply_id: so.Mapped[int] = so.mapped_column(primary_key=True)
+    supply_stock: so.Mapped[int] = so.mapped_column(sa.Integer, default=0)
+    expiration_date: so.Mapped[Optional[sa.Date]] = so.mapped_column(sa.Date)
 
-    user_id = db.Column(db.Integer, db.ForeignKey("users.user_id"), nullable=False)
+    lookup_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("med_lookup.lookup_id"))
+    user_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("users.user_id"))
 
-    brand_name: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))
-    generic_name: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))
-    dosage_form: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))
-    quantity: so.Mapped[int] = so.mapped_column(sa.Integer, default=0)
-    expiration_date: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))
+    # relationships
+    medicine: so.Mapped["Med_Lookup"] = so.relationship("Med_Lookup", back_populates="med_supplies")
+    user: so.Mapped["User"] = so.relationship("User", back_populates="med_supplies")
+
+    @property
+    def intakes_left(self):
+        try:
+            strength = float(self.medicine.dosage_strength)
+            return self.supply_stock / strength
+        except (TypeError, ValueError, ZeroDivisionError):
+            return None
 
 
-# CIRCLE
-# owner_id identifies who created/owns the circle and can manage members/permissions
+# ── CIRCLE ────────────────────────────────────────────────────────────────────
 
 class Circle(db.Model):
     __tablename__ = "circles"
 
-    circle_id = db.Column(db.Integer, primary_key=True)
-    circle_name = db.Column(db.String(100), nullable=False)
-    owner_id = db.Column(db.Integer, db.ForeignKey("users.user_id"), nullable=False)
+    circle_id: so.Mapped[int] = so.mapped_column(primary_key=True)
+    circle_name: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))
 
-    members = db.relationship("CircleMember", backref="circle", lazy=True, cascade="all, delete-orphan")
-    invites = db.relationship("CircleInvite", backref="circle", lazy=True, cascade="all, delete-orphan")
+    # owner of the circle
+    owner_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("users.user_id"))
+
+    # relationships
+    owner: so.Mapped["User"] = so.relationship("User", foreign_keys=[owner_id])
+    members: so.Mapped[List["CircleMember"]] = so.relationship("CircleMember", back_populates="circle")
 
 
-# CIRCLE_MEMBER
-# Stores accepted members only; permission = 'canview' | 'canedit'
+# ── CIRCLE_MEMBER ─────────────────────────────────────────────────────────────
+# Doubles as both invite record and accepted-member record.
+# status: 'pending' | 'accepted' | 'rejected'
+# permission: 'canview' | 'canedit'
+# inviter_id: user who sent the invite (the circle owner)
 
 class CircleMember(db.Model):
     __tablename__ = "circle_members"
 
-    circle_member_id = db.Column(db.Integer, primary_key=True)
-    circle_id = db.Column(db.Integer, db.ForeignKey("circles.circle_id"), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.user_id"), nullable=False)
-    permission = db.Column(db.String(20), nullable=False, default="canview")
+    circle_member_id: so.Mapped[int] = so.mapped_column(primary_key=True)
 
+    circle_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("circles.circle_id"))
+    user_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("users.user_id"))
+    inviter_id: so.Mapped[Optional[int]] = so.mapped_column(sa.ForeignKey("users.user_id"), nullable=True)
 
-# CIRCLE_INVITE
-# Represents a pending invite from a circle owner to another user.
-# status: 'pending' | 'accepted' | 'rejected'
+    permission: so.Mapped[str] = so.mapped_column(sa.String(20), default="canview")
+    status: so.Mapped[str] = so.mapped_column(sa.String(20), default="pending")
 
-class CircleInvite(db.Model):
-    __tablename__ = "circle_invites"
-
-    invite_id = db.Column(db.Integer, primary_key=True)
-    circle_id = db.Column(db.Integer, db.ForeignKey("circles.circle_id"), nullable=False)
-    inviter_id = db.Column(db.Integer, db.ForeignKey("users.user_id"), nullable=False)
-    invitee_id = db.Column(db.Integer, db.ForeignKey("users.user_id"), nullable=False)
-    permission = db.Column(db.String(20), nullable=False, default="canview")
-    status = db.Column(db.String(20), nullable=False, default="pending")
+    # relationships
+    circle: so.Mapped["Circle"] = so.relationship("Circle", back_populates="members")
+    user: so.Mapped["User"] = so.relationship(
+        "User",
+        primaryjoin="CircleMember.user_id == User.user_id",
+        foreign_keys="[CircleMember.user_id]",
+        back_populates="circle_memberships",
+    )
+    inviter: so.Mapped[Optional["User"]] = so.relationship(
+        "User",
+        primaryjoin="CircleMember.inviter_id == User.user_id",
+        foreign_keys="[CircleMember.inviter_id]",
+    )

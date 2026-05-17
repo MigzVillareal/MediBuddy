@@ -103,6 +103,5 @@ class CircleMember(db.Model):
     __tablename__ = "circle_members"
 
     circle_member_id = db.Column(db.Integer, primary_key=True)
-
-    circle_id = db.Column(db.Integer, db.ForeignKey("circles.user_id"))
+    circle_id = db.Column(db.Integer, db.ForeignKey("circles.circle_id"))
     user_id = db.Column(db.Integer, db.ForeignKey("users.user_id"))

@@ -103,7 +103,7 @@
           </div>
 
           <!-- add medicine -->
-          <button class="btn-add-med" @click="showAddMed = true" style="margin-top:16px">+ Add Medicine</button>
+          <button class="btn-add-med" @click="openAddMed" style="margin-top:16px">+ Add Medicine</button>
           <button class="btn-ghost" @click="closeDetail" style="margin-top:8px">Close</button>
         </div>
       </div>
@@ -120,12 +120,14 @@
           <!-- search -->
           <label class="field-label">Search Medicine *</label>
           <input class="field" placeholder="Type brand or generic name…" v-model="medSearch" @input="searchMed" />
+          <!-- API search results -->
           <div class="search-results" v-if="medResults.length > 0 && !chosenMed">
             <div class="search-result" v-for="m in medResults" :key="m.lookup_id" @click="pickMed(m)">
               <p class="sr__brand">{{ m.brand_name }}</p>
               <p class="sr__generic">{{ m.generic_name }} · {{ m.dosage_form }}</p>
             </div>
           </div>
+
           <div class="chosen-med" v-if="chosenMed">
             <p class="chosen-med__name">✅ {{ chosenMed.brand_name }}</p>
             <p class="chosen-med__sub">{{ chosenMed.generic_name }} · {{ chosenMed.dosage_form }}</p>
@@ -173,10 +175,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
-import api from '@/api'
-
-// ── STATE ──────────────────────────────────────────────────────
+// ── STATE ──────────────────────────────────────────────────────────────
 const prescriptions  = ref([])
 const loading        = ref(false)
 const showCreate     = ref(false)
@@ -296,6 +295,11 @@ async function removeDetail(d) {
 }
 
 // ── ADD MEDICINE ───────────────────────────────────────────────
+function openAddMed() {
+  resetAddForm()
+  showAddMed.value = true
+}
+
 function searchMed() {
   clearTimeout(searchTimeout)
   chosenMed.value = null

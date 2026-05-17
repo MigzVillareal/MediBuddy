@@ -14,91 +14,72 @@ def safe_login_required(fn):
         return login_required(fn)(*args, **kwargs)
     return wrapper
 
-@meds_bp.route('/drug_search', methods=['GET'])
-def drug_search():
-    query = request.args.get("q", "").strip()
-
-    if not query:
-        return jsonify({"error": "Search query required"}), 400
-
-    results = Med_Supply.query.filter(
-        (Med_Supply.brand_name.ilike(f"%{query}%")) |
-        (Med_Supply.generic_name.ilike(f"%{query}%"))
-    ).all()
-
-    return jsonify([
-        {
-            "id": d.id,
-            "brand_name": d.brand_name,
-            "generic_name": d.generic_name,
-            "dosage_form": d.dosage_form
-        }
-        for d in results
-    ])
-
 @meds_bp.route('/drug_stock', methods=['POST'])
 @login_required
 def add_drug():
     data = request.get_json(force=True)
 
-    drug = Med_Supply(
+    supply = Med_Supply(
         user_id=current_user.user_id,
-        brand_name=data.get("brand_name", ""),
-        generic_name=data.get("generic_name", ""),
-        dosage_form=data.get("dosage_form", ""),
-        quantity=int(data.get("quantity")),
+        lookup_id=data.get("lookup_id"),
+        supply_stock=int(data.get("supply_stock", 0)),
+        expiration_date=data.get("expiration_date"),
     )
 
-    db.session.add(drug)
+    db.session.add(supply)
     db.session.commit()
 
-    return jsonify({'message': 'Drug Added', 'id': drug.id}), 201
+    return jsonify({'message': 'Drug Added', 'supply_id': supply.supply_id}), 201
 
-@meds_bp.route('/drug_stock/<int:drug_id>', methods=['PATCH', 'OPTIONS'])
+@meds_bp.route('/drug_stock/<int:supply_id>', methods=['PATCH', 'OPTIONS'])
 @safe_login_required
-def update_stock(drug_id):
-    drug = Med_Supply.query.filter_by(id=drug_id, user_id=current_user.user_id).first()
- 
-    if not drug:
+def update_stock(supply_id):
+    supply = Med_Supply.query.filter_by(supply_id=supply_id, user_id=current_user.user_id).first()
+
+    if not supply:
         return jsonify({"error": "Not found"}), 404
- 
+
     data = request.get_json()
-    new_qty = data.get("quantity")
- 
+    new_qty = data.get("supply_stock")
+
     if new_qty is None:
-        return jsonify({"error": "quantity required"}), 400
- 
-    drug.quantity = max(0, int(new_qty))   # never go below 0
+        return jsonify({"error": "supply_stock required"}), 400
+
+    supply.supply_stock = max(0, int(new_qty))
     db.session.commit()
- 
-    return jsonify({"message": "Updated", "quantity": drug.quantity}), 200
- 
- 
-@meds_bp.route('/drug_stock/<int:drug_id>', methods=['DELETE', 'OPTIONS'])
+
+    return jsonify({"message": "Updated", "supply_stock": supply.supply_stock}), 200
+
+@meds_bp.route('/drug_stock/<int:supply_id>', methods=['DELETE', 'OPTIONS'])
 @safe_login_required
-def delete_drug(drug_id):
-    drug = Med_Supply.query.filter_by(id=drug_id, user_id=current_user.user_id).first()
- 
-    if not drug:
+def delete_drug(supply_id):
+    supply = Med_Supply.query.filter_by(supply_id=supply_id, user_id=current_user.user_id).first()
+
+    if not supply:
         return jsonify({"error": "Not found"}), 404
- 
-    db.session.delete(drug)
+
+    db.session.delete(supply)
     db.session.commit()
- 
+
     return jsonify({"message": "Deleted"}), 200
 
 @meds_bp.route('/drug_stock', methods=['GET'])
 @login_required
 def get_drug_stock():
-    drugs = Med_Supply.query.filter_by(user_id=current_user.user_id).all()
+    supplies = Med_Supply.query.filter_by(user_id=current_user.user_id).all()
 
     return jsonify([
         {
-            "id": d.id,
-            "brand_name": d.brand_name,
-            "generic_name": d.generic_name,
-            "dosage_form": d.dosage_form,
-            "quantity": d.quantity
+            "supply_id": s.supply_id,
+            "lookup_id": s.lookup_id,
+            "brand_name": s.medicine.brand_name if s.medicine else None,
+            "generic_name": s.medicine.generic_name if s.medicine else None,
+            "dosage_strength": s.medicine.dosage_strength if s.medicine else None,
+            "dosage_form": s.medicine.dosage_form if s.medicine else None,
+            "category": s.medicine.category if s.medicine else None,
+            "supply_stock": s.supply_stock,
+            "expiration_date": str(s.expiration_date) if s.expiration_date else None,
+            "intakes_left": s.intakes_left,
         }
-        for d in drugs
-    ])
+        for s in supplies
+    ])

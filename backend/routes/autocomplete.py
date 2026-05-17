@@ -1,51 +1,32 @@
-import csv
-import os
 from flask import Blueprint, request, jsonify
+from extensions import db
+from models import Med_Lookup
 
-autocomplete_bp = Blueprint("autocomplete", __name__, url_prefix="/api")
+autocomplete_bp = Blueprint("autocomplete", __name__)
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-CSV_PATH = os.path.join(BASE_DIR, "..", "data", "drug_lookup_table.csv")
-
-DATA = None
-
-def load_drugs():
-    global DATA
-    if DATA is not None:
-        return DATA
-    
-    if not os.path.exists(CSV_PATH):
-        DATA = []
-        return DATA
-
-    items = []
-    with open(CSV_PATH, newline="", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            items.append({
-                "generic_name": row.get("Generic Name") or row.get("generic_name"),
-                "brand_name": row.get("Brand Name") or row.get("brand_name"),
-                "dosage_strength": row.get("Dosage Strength") or row.get("dosage_strength"),
-                "dosage_form": row.get("Dosage Form") or row.get("dosage_form"),
-            })
-    DATA = items
-    return DATA
-
-
-@autocomplete_bp.route("/autocomplete")
+@autocomplete_bp.route("/", strict_slashes=False)
 def autocomplete():
-    query = request.args.get("q", "").strip().lower()
+    query = request.args.get("q", "").strip()
 
     if not query:
         return jsonify([])
 
-    results = []
-    for drug in load_drugs():
-        brand = (drug.get("brand_name") or "").lower()
-        generic = (drug.get("generic_name") or "").lower()
-        form = (drug.get("dosage_form") or "").lower()
+    results = Med_Lookup.query.filter(
+        db.or_(
+            Med_Lookup.brand_name.ilike(f"%{query}%"),
+            Med_Lookup.generic_name.ilike(f"%{query}%"),
+            Med_Lookup.dosage_form.ilike(f"%{query}%"),
+        )
+    ).limit(10).all()
 
-        if query in brand or query in generic or query in form:
-            results.append(drug)
-
-    return jsonify(results[:10])
+    return jsonify([
+        {
+            "lookup_id": m.lookup_id,
+            "brand_name": m.brand_name,
+            "generic_name": m.generic_name,
+            "dosage_strength": m.dosage_strength,
+            "dosage_form": m.dosage_form,
+            "category": m.category,
+        }
+        for m in results
+    ])

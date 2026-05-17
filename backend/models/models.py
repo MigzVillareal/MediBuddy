@@ -76,8 +76,8 @@ class Prescription_Detail(db.Model):
     prescription_detail_id: so.Mapped[int] = so.mapped_column(primary_key=True)
     date_start: so.Mapped[sa.Date] = so.mapped_column(sa.Date)
     date_end: so.Mapped[Optional[sa.Date]] = so.mapped_column(sa.Date)
-    time_taken: so.Mapped[str] = so.mapped_column(sa.String(100))   # "08:00,14:00,20:00"
-    days_taken: so.Mapped[str] = so.mapped_column(sa.String(20))    # "MWF", "TTH", "daily"
+    time_taken: so.Mapped[str] = so.mapped_column(sa.String(100))
+    days_taken: so.Mapped[str] = so.mapped_column(sa.String(20))
 
     prescription_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("prescriptions.prescription_id"))
     lookup_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("med_lookup.lookup_id"))

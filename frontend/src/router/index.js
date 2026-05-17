@@ -17,6 +17,10 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to) => {
+  // Don't check auth for public routes
+  if (to.meta.public) {
+    return true
+  }
 
   let isAuthenticated = false
   try {
@@ -25,18 +29,6 @@ router.beforeEach(async (to) => {
   } catch {
     isAuthenticated = false
   }
-
-  if (to.path === '/') {
-    return isAuthenticated ? '/home' : '/login'
-  }
-
-  
-  // if (to.meta.public) {
-  //   if (isAuthenticated && (to.path === '/login' || to.path === '/register')) {
-  //     return '/home'
-  //   }
-  //   return true
-  // }
 
   if (!isAuthenticated) {
     return '/login'

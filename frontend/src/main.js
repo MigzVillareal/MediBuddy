@@ -1,14 +1,23 @@
 import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
-import  './assets/main.css'
+import './assets/main.css'
 
 window.OneSignalDeferred = window.OneSignalDeferred || []
 OneSignalDeferred.push(async function(OneSignal) {
     await OneSignal.init({
-        appId: "6c085cb1-19d4-42fa-8a98-35eb7367f422",
+        appId: "your-actual-app-id",
+        notifyButton: {
+            enable: true,
+        },
+        serviceWorkerPath: "/OneSignalSDKWorker.js",
     })
 })
 
-createApp(App).use(router).mount("#app");
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/OneSignalSDKWorker.js')
+        .then(reg => console.log('SW registered:', reg))
+        .catch(err => console.log('SW registration failed:', err))
+}
 
+createApp(App).use(router).mount("#app")

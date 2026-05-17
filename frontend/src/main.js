@@ -11,6 +11,21 @@ app.use(OneSignalVuePlugin, {
     appId: '6c085cb1-19d4-42fa-8a98-35eb7367f422',
     serviceWorkerParam: { scope: '/' },
     serviceWorkerPath: 'OneSignalSDKWorker.js',
+    promptOptions: {
+        slidedown: {
+            prompts: [
+                {
+                    type: 'push',
+                    autoPrompt: true,
+                    text: {
+                        actionMessage: 'Allow MediBuddy to send you medication reminders.',
+                        acceptButton: 'Allow',
+                        cancelButton: 'No Thanks',
+                    },
+                }
+            ]
+        }
+    }
 })
 
 app.mount("#app")

@@ -6,7 +6,7 @@ import  './assets/main.css'
 window.OneSignalDeferred = window.OneSignalDeferred || []
 OneSignalDeferred.push(async function(OneSignal) {
     await OneSignal.init({
-        appId: "YOUR_APP_ID",
+        appId: "6c085cb1-19d4-42fa-8a98-35eb7367f422",
     })
 })
 

@@ -256,6 +256,10 @@ onMounted(fetchMedications)
 .btn-delete { background: none; border: none; font-size: 18px; cursor: pointer; padding: 4px; opacity: .6; transition: opacity .15s; }
 .btn-delete:hover { opacity: 1; }
 
+.btn-add-to-rx{
+  
+}
+
 .add-btn-wrap {
   position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
   width: calc(100% - 40px); max-width: 440px; z-index: 9;

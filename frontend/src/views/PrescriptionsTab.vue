@@ -108,6 +108,40 @@
         </div>
       </div>
     </Teleport>
+    <!-- Prescription Picker Sheet -->
+    <Teleport to="body">
+      <div class="overlay" v-if="showRxPicker" @click.self="showRxPicker = false">
+        <div class="sheet">
+          <div class="sheet-handle"></div>
+          <h3 class="sheet-title">Add to which prescription?</h3>
+          <p class="detail-meta" v-if="shelfBridge.pendingMed">
+            Adding: <strong>{{ shelfBridge.pendingMed.brand_name }}</strong>
+          </p>
+
+          <div class="empty-meds" v-if="prescriptions.length === 0">
+            No prescriptions yet. Create one first.
+          </div>
+
+          <div
+            class="rx-card"
+            v-for="rx in prescriptions"
+            :key="rx.prescription_id"
+            @click="pickRxForMed(rx)"
+          >
+            <div class="rx-card__icon">📋</div>
+            <div class="rx-card__body">
+              <p class="rx-card__name">{{ rx.name }}</p>
+              <p class="rx-card__meta" v-if="rx.doctor">Dr. {{ rx.doctor }}</p>
+            </div>
+            <span class="rx-card__arrow">›</span>
+          </div>
+
+          <button class="btn-ghost" @click="showRxPicker = false; shelfBridge.pendingMed = null">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </Teleport>
 
 <!-- ADD MEDICINE SHEET ─────────────────────────────────────── -->
 <Teleport to="body">
@@ -219,6 +253,7 @@ const chosenMed     = ref(null)
 const isAddingDetail = ref(false)
 const addError      = ref('')
 const timeInput     = ref('')
+const showRxPicker = ref(false)
 
 const detailForm = reactive({
   date_start: '',
@@ -248,8 +283,7 @@ onMounted(async () => {
   await loadPrescriptions()
 
   if (shelfBridge.pendingMed) {
-    openAddMed()
-    pickMed(shelfBridge.pendingMed)
+    openRxPicker()
     shelfBridge.pendingMed = null
   }
 })
@@ -284,6 +318,18 @@ async function createRx() {
   } catch (e) {
     createError.value = e.response?.data?.error || 'Failed to create prescription.'
   } finally { isCreating.value = false }
+}
+
+function openRxPicker() {
+  showRxPicker.value = true
+}
+
+async function pickRxForMed(rx) {
+  showRxPicker.value = false
+  await openDetail(rx)        // sets activeRx and loads its details
+  openAddMed()                // opens the Add Medicine sheet
+  pickMed(shelfBridge.pendingMed)   // pre-fills the medicine
+  shelfBridge.pendingMed = null
 }
 
 // ── DETAIL ─────────────────────────────────────────────────────

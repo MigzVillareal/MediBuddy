@@ -83,11 +83,13 @@ class Prescription_Detail(db.Model):
     prescription_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("prescriptions.prescription_id"))
     lookup_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("med_lookup.lookup_id"))
     user_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("users.user_id"))
+    supply_id: so.Mapped[Optional[int]] = so.mapped_column(sa.ForeignKey("med_supply.supply_id"))
 
     # relationships
     prescription: so.Mapped["Prescription"] = so.relationship("Prescription", back_populates="prescription_details")
     medicine: so.Mapped["Med_Lookup"] = so.relationship("Med_Lookup")
     user: so.Mapped["User"] = so.relationship("User", back_populates="prescription_details")
+    supply: so.Mapped[Optional["Med_Supply"]] = so.relationship("Med_Supply", back_populates="prescription_details")
 
 
 # ── ALARM ─────────────────────────────────────────────────────────────────────
@@ -133,6 +135,7 @@ class Med_Supply(db.Model):
     # relationships
     medicine: so.Mapped["Med_Lookup"] = so.relationship("Med_Lookup")
     user: so.Mapped["User"] = so.relationship("User", back_populates="med_supplies")
+    prescription_details: so.Mapped[list["Prescription_Detail"]] = so.relationship("Prescription_Detail", back_populates="supply")
 
     @property
     def intakes_left(self):

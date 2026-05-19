@@ -46,6 +46,7 @@
 
             <!-- Delete -->
             <button class="btn-delete" @click="deleteMed(med)">🗑</button>
+            <button class="btn-add-to-rx" @click="addToPrescription(med)">+ Add to Rx</button>
           </div>
         </div>
 
@@ -106,6 +107,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import api from '@/api'
+import { shelfBridge } from '@/composables/useShelfBridge'
 
 const medications  = ref([])
 const loading      = ref(true)
@@ -150,6 +152,17 @@ async function confirmNumpad() {
     console.error('Failed to update stock:', err)
   }
 }
+function addToPrescription(med) {
+  shelfBridge.pendingMed = {
+    lookup_id:    med.lookup_id,   // adjust to whatever field your med object has
+    brand_name:   med.brand_name,
+    generic_name: med.generic_name,
+    dosage_form:  med.dosage_form,
+  }
+  // switch to prescriptions tab — adjust to however your tab routing works
+  shelfBridge.targetTab = 'prescriptions'
+}
+
 
 // ── Stock ±1 ───────────────────────────────────────────────────
 async function changeStock(med, delta) {

@@ -192,8 +192,9 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, nextTick } from 'vue'
+import { ref, reactive, onMounted, nextTick, watch} from 'vue'
 import api from '@/api'
+import { shelfBridge } from '@/composables/useShelfBridge'
 
 // ── STATE ──────────────────────────────────────────────────────────────
 const medSearchInput  = ref(null)
@@ -243,7 +244,15 @@ function formatDate(d) {
 }
 
 // ── INIT ───────────────────────────────────────────────────────
-onMounted(loadPrescriptions)
+onMounted(async () => {
+  await loadPrescriptions()
+
+  if (shelfBridge.pendingMed) {
+    openAddMed()
+    pickMed(shelfBridge.pendingMed)
+    shelfBridge.pendingMed = null
+  }
+})
 
 async function loadPrescriptions() {
   loading.value = true

@@ -25,7 +25,6 @@ class User(UserMixin, db.Model):
 
     # relationships
     prescriptions: so.Mapped[List["Prescription"]] = so.relationship("Prescription", back_populates="user")
-    prescription_details: so.Mapped[List["Prescription_Detail"]] = so.relationship("Prescription_Detail", back_populates="user")
     med_supplies: so.Mapped[List["Med_Supply"]] = so.relationship("Med_Supply", back_populates="user")
     circle_memberships: so.Mapped[List["CircleMember"]] = so.relationship(
         "CircleMember",
@@ -81,14 +80,10 @@ class Prescription_Detail(db.Model):
     days_taken: so.Mapped[str] = so.mapped_column(sa.String(20))
 
     prescription_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("prescriptions.prescription_id"))
-    lookup_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("med_lookup.lookup_id"))
-    user_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("users.user_id"))
     supply_id: so.Mapped[Optional[int]] = so.mapped_column(sa.ForeignKey("med_supply.supply_id"))
 
     # relationships
     prescription: so.Mapped["Prescription"] = so.relationship("Prescription", back_populates="prescription_details")
-    medicine: so.Mapped["Med_Lookup"] = so.relationship("Med_Lookup")
-    user: so.Mapped["User"] = so.relationship("User", back_populates="prescription_details")
     supply: so.Mapped[Optional["Med_Supply"]] = so.relationship("Med_Supply", back_populates="prescription_details")
 
 

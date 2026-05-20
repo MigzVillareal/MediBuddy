@@ -78,6 +78,9 @@ class Prescription_Detail(db.Model):
     date_end: so.Mapped[Optional[sa.Date]] = so.mapped_column(sa.Date)
     time_taken: so.Mapped[str] = so.mapped_column(sa.String(100))
     days_taken: so.Mapped[str] = so.mapped_column(sa.String(20))
+    onesignal_id: so.Mapped[Optional[str]] = so.mapped_column(sa.String(200))  # add this
+    job_reference: so.Mapped[Optional[str]] = so.mapped_column(sa.String(200))
+    is_active: so.Mapped[bool] = so.mapped_column(sa.Boolean, default=True)
 
     prescription_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("prescriptions.prescription_id"))
     supply_id: so.Mapped[Optional[int]] = so.mapped_column(sa.ForeignKey("med_supply.supply_id"))
@@ -85,7 +88,6 @@ class Prescription_Detail(db.Model):
     # relationships
     prescription: so.Mapped["Prescription"] = so.relationship("Prescription", back_populates="prescription_details")
     supply: so.Mapped[Optional["Med_Supply"]] = so.relationship("Med_Supply", back_populates="prescription_details")
-
 
 # ── ALARM ─────────────────────────────────────────────────────────────────────
 

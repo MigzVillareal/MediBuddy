@@ -423,18 +423,28 @@ function resetAddForm() {
 
 async function addDetail() {
   addError.value = ''
-  if (!chosenMed.value)            { addError.value = 'Please select a medicine.'; return }
-  if (!detailForm.date_start)      { addError.value = 'Start date is required.'; return }
+  if (!chosenMed.value)              { addError.value = 'Please select a medicine.'; return }
+  if (!detailForm.date_start)        { addError.value = 'Start date is required.'; return }
   if (detailForm.times.length === 0) { addError.value = 'Add at least one time.'; return }
+
+  // Get OneSignal subscription ID
+  let onesignal_id = null
+  try {
+    await window.OneSignal.Notifications.requestPermission()
+    onesignal_id = await window.OneSignal.User.PushSubscription.id
+  } catch (e) {
+    console.warn('OneSignal not available:', e)
+  }
 
   isAddingDetail.value = true
   try {
     await api.post(`/prescriptions/${activeRx.value.prescription_id}/details`, {
-      lookup_id:   chosenMed.value.lookup_id,
-      date_start:  detailForm.date_start,
-      date_end:    detailForm.date_end || null,
-      time_taken:  detailForm.times.join(','),
-      days_taken:  detailForm.days_taken,
+      lookup_id:    chosenMed.value.lookup_id,
+      date_start:   detailForm.date_start,
+      date_end:     detailForm.date_end || null,
+      time_taken:   detailForm.times.join(','),
+      days_taken:   detailForm.days_taken,
+      onesignal_id: onesignal_id,   // new
     })
     showAddMed.value = false
     resetAddForm()

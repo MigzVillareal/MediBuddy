@@ -24,8 +24,8 @@
           <p class="med-card__brand">{{ med.brand_name }}</p>
           <p class="med-card__generic">{{ med.generic_name }}</p>
           <span class="med-card__form">{{ med.dosage_strength }}</span>
-          <span class="med-card__form">{{ med.dosage_form }}</span>
-          <span class="med-card__form">{{ med.category }}</span>
+          <span class="med-card__form">{{ truncateAtBracket(med.dosage_form) }}</span>
+          <span class="med-card__form">{{ truncateAtBracket(med.category) }}</span>
           <span class="med-card__exp" v-if="med.expiration_date">Expiry: {{ med.expiration_date }}</span>
         </div>
 
@@ -152,6 +152,16 @@ async function confirmNumpad() {
     console.error('Failed to update stock:', err)
   }
 }
+
+function truncateAtBracket(str) {
+  if (!str) return ''
+  const i = Math.min(
+    str.includes('(') ? str.indexOf('(') : Infinity,
+    str.includes('[') ? str.indexOf('[') : Infinity
+  )
+  return i === Infinity ? str.trim() : str.slice(0, i).trim()
+}
+
 function addToPrescription(med) {
   shelfBridge.pendingMed = {
     lookup_id:    med.lookup_id,   // adjust to whatever field your med object has

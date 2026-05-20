@@ -8,7 +8,12 @@ import os
 
 prescriptions_bp = Blueprint("prescriptions", __name__)
 
+def check_reminders():
+    # to be added
+    pass
+
 scheduler = BackgroundScheduler()
+scheduler.add_job(check_reminders, 'interval', minutes=1)
 scheduler.start()
 
 ONESIGNAL_APP_ID  = os.getenv("ONESIGNAL_APP_ID")
@@ -150,8 +155,8 @@ def add_detail(prescription_id):
     data = request.get_json()
 
     lookup_id = data.get("lookup_id")
-    if not lookup_id or not db.session.get(Med_Lookup, lookup_id):
-        return jsonify({"error": "Invalid medicine selected."}), 400
+    # if not lookup_id or not db.session.get(Med_Lookup, lookup_id):
+    #     return jsonify({"error": "Invalid medicine selected."}), 400
 
     date_start = data.get("date_start")
     time_taken = (data.get("time_taken") or "").strip()
@@ -171,7 +176,7 @@ def add_detail(prescription_id):
         time_taken=time_taken,
         days_taken=days_taken,
         prescription_id=prescription_id,
-        lookup_id=lookup_id,
+        # lookup_id=lookup_id,
         onesignal_id=onesignal_id,
         is_active=bool(onesignal_id),
     )

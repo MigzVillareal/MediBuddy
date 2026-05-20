@@ -285,14 +285,25 @@ async function submitAddToRx() {
   schedError.value = ''
   if (!schedForm.date_start)          { schedError.value = 'Start date is required.'; return }
   if (schedForm.times.length === 0)   { schedError.value = 'Add at least one time.'; return }
+
+  // Get OneSignal subscription ID
+  let onesignal_id = null
+  try {
+    await window.OneSignal.Notifications.requestPermission()
+    onesignal_id = window.OneSignal.User.PushSubscription.id
+  } catch (e) {
+    console.warn('OneSignal not available:', e)
+  }
+
   addingDetail.value = true
   try {
     await api.post(`/prescriptions/${selectedRx.value.prescription_id}/details`, {
-      supply_id:  pendingMed.value.supply_id,
-      date_start: schedForm.date_start,
-      date_end:   schedForm.date_end || null,
-      time_taken: schedForm.times.join(','),
-      days_taken: schedForm.days_taken,
+      supply_id:    pendingMed.value.supply_id,
+      date_start:   schedForm.date_start,
+      date_end:     schedForm.date_end || null,
+      time_taken:   schedForm.times.join(','),
+      days_taken:   schedForm.days_taken,
+      onesignal_id: onesignal_id,
     })
     showSchedForm.value = false
     pendingMed.value    = null

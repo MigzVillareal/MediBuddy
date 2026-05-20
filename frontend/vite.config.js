@@ -12,7 +12,7 @@ export default defineConfig({
     },
   },
   server: {
-    allowedHosts: 'all',
+    allowedHosts: 'fancy-purely-smokeless.ngrok-free.dev',
     proxy: {
       '/api': 'http://localhost:5000'
     }

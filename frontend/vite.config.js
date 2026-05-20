@@ -1,20 +1,21 @@
 import { fileURLToPath, URL } from 'node:url'
-import { defineConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
+   import { defineConfig } from 'vite'
+   import vue from '@vitejs/plugin-vue'
 
-export default defineConfig({
-  plugins: [
-    vue(),
-  ],
-  resolve: {
-    alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url))
-    },
-  },
-  server: {
-    allowedHosts: 'fancy-purely-smokeless.ngrok-free.dev',
-    proxy: {
-      '/api': 'http://localhost:5000'
-    }
+   export default defineConfig({
+     plugins: [
+       vue(),
+     ],
+     resolve: {
+       alias: {
+         '@': fileURLToPath(new URL('./src', import.meta.url))
+       },
+     },
+     server: {
+  host: true,
+  allowedHosts: true,
+  proxy: {
+    '/api': 'http://localhost:5000'
   }
-})
+}
+   })

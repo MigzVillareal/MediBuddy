@@ -34,21 +34,14 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
 import ShelfTab          from './ShelfTab.vue'
 import PrescriptionsTab  from './PrescriptionsTab.vue'
 import CircleTab         from './CircleTab.vue'
 import ProfileTab        from './ProfileTab.vue'
-import { shelfBridge } from '@/composables/useShelfBridge'
 
 // Tracks which tab is currently visible
 const activeTab = ref('home')
-
-watch(() => shelfBridge.targetTab, (tab) => {
-  if (!tab) return
-  activeTab.value = tab
-  shelfBridge.targetTab = null   // clear after switching
-})
 </script>
 
 <style scoped>

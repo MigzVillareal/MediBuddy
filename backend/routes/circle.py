@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from extensions import db
-from models import Circle, CircleMember, User, Med_Supply, Med_Lookup, Prescription, Prescription_Detail, Alarm
+from models import Circle, CircleMember, User, Med_Supply, Med_Lookup, Prescription, Prescription_Detail
 
 circle_bp = Blueprint("circle", __name__)
 

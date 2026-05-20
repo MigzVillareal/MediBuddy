@@ -59,13 +59,13 @@ class Prescription(db.Model):
     date: so.Mapped[Optional[sa.Date]] = so.mapped_column(sa.Date)
     doctor: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))
     detail: so.Mapped[Optional[str]] = so.mapped_column(sa.String(256))
+    alarm_active: so.Mapped[bool] = so.mapped_column(sa.Boolean, default=True)
 
     user_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("users.user_id"))
 
     # relationships
     user: so.Mapped["User"] = so.relationship("User", back_populates="prescriptions")
     prescription_details: so.Mapped[List["Prescription_Detail"]] = so.relationship("Prescription_Detail", back_populates="prescription")
-    alarm: so.Mapped[Optional["Alarm"]] = so.relationship("Alarm", back_populates="prescription", uselist=False)
 
 
 # ── PRESCRIPTION_DETAIL ───────────────────────────────────────────────────────
@@ -78,9 +78,8 @@ class Prescription_Detail(db.Model):
     date_end: so.Mapped[Optional[sa.Date]] = so.mapped_column(sa.Date)
     time_taken: so.Mapped[str] = so.mapped_column(sa.String(100))
     days_taken: so.Mapped[str] = so.mapped_column(sa.String(20))
-    onesignal_id: so.Mapped[Optional[str]] = so.mapped_column(sa.String(200))  # add this
+    onesignal_id: so.Mapped[Optional[str]] = so.mapped_column(sa.String(200))
     job_reference: so.Mapped[Optional[str]] = so.mapped_column(sa.String(200))
-    is_active: so.Mapped[bool] = so.mapped_column(sa.Boolean, default=True)
 
     prescription_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("prescriptions.prescription_id"))
     supply_id: so.Mapped[Optional[int]] = so.mapped_column(sa.ForeignKey("med_supply.supply_id"))
@@ -88,20 +87,6 @@ class Prescription_Detail(db.Model):
     # relationships
     prescription: so.Mapped["Prescription"] = so.relationship("Prescription", back_populates="prescription_details")
     supply: so.Mapped[Optional["Med_Supply"]] = so.relationship("Med_Supply", back_populates="prescription_details")
-
-# ── ALARM ─────────────────────────────────────────────────────────────────────
-
-class Alarm(db.Model):
-    __tablename__ = "alarms"
-
-    alarm_id: so.Mapped[int] = so.mapped_column(primary_key=True)
-    is_active: so.Mapped[bool] = so.mapped_column(sa.Boolean, default=True)
-    onesignal_notification_id: so.Mapped[Optional[str]] = so.mapped_column(sa.String(256))
-
-    prescription_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("prescriptions.prescription_id"))
-
-    # relationships
-    prescription: so.Mapped["Prescription"] = so.relationship("Prescription", back_populates="alarm")
 
 
 # ── MED_LOOKUP ────────────────────────────────────────────────────────────────
@@ -149,14 +134,18 @@ class Circle(db.Model):
     __tablename__ = "circles"
 
     circle_id: so.Mapped[int] = so.mapped_column(primary_key=True)
-    circle_name: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))
-
     # owner of the circle
     owner_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("users.user_id"))
+    prescription_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("prescriptions.prescription_id"))
 
     # relationships
     owner: so.Mapped["User"] = so.relationship("User", foreign_keys=[owner_id])
+    prescription: so.Mapped["Prescription"] = so.relationship("Prescription")
     members: so.Mapped[List["CircleMember"]] = so.relationship("CircleMember", back_populates="circle")
+
+    @property
+    def circle_name(self):
+        return f"{self.prescription.user.username}'s {self.prescription.name}"
 
 
 # ── CIRCLE_MEMBER ─────────────────────────────────────────────────────────────

@@ -361,8 +361,7 @@ async function submitAddToRx() {
 .tab { padding: 20px 20px 140px; }
 
 /* Circle context bar */
-.ctx-bar { display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-bottom:14px; scrollbar-width:none; }
-.ctx-bar::-webkit-scrollbar { display:none; }
+.ctx-bar { display:flex; flex-wrap: wrap; gap:8px;  padding-bottom:4px; margin-bottom:14px; }
 .ctx-btn { flex-shrink:0; padding:7px 14px; border-radius:20px; border:2px solid var(--color-border); background:var(--color-white); font-size:13px; font-weight:600; font-family:var(--font-main); color:var(--color-text-muted); cursor:pointer; white-space:nowrap; transition:all .15s; }
 .ctx-btn--active { background:var(--color-primary); border-color:var(--color-primary); color:#fff; }
 .ctx-btn:hover:not(.ctx-btn--active) { border-color:var(--color-primary); color:var(--color-primary); }
@@ -377,14 +376,23 @@ async function submitAddToRx() {
 .hint-sm { font-size:13px; color:var(--color-text-muted); padding:8px 0; }
 
 .med-list { display:flex; flex-direction:column; gap:12px; }
-.med-card { background:var(--color-white); border-radius:14px; padding:14px 16px; display:flex; align-items:center; justify-content:space-between; gap:12px; box-shadow:var(--shadow-card); }
-.med-card__info { flex:1; }
+.med-card { background:var(--color-white); border-radius:14px; padding:14px 16px; display:flex; align-items:center; justify-content:space-between; gap:12px; box-shadow:var(--shadow-card); flex-wrap: wrap;}
+.med-card__info { flex:1; min-width: 0; }
 .med-card__brand   { font-size:15px; font-weight:700; color:var(--color-text-dark); }
 .med-card__generic { font-size:12px; color:var(--color-text-muted); margin-top:2px; }
 .med-card__form { display:inline-block; margin-top:6px; margin-right:6px; font-size:11px; font-weight:700; background:var(--color-primary-light); color:var(--color-primary-dark); padding:2px 8px; border-radius:20px; }
 .med-card__exp  { display:inline-block; margin-top:6px; font-size:11px; font-weight:600; color:var(--color-text-muted); padding:2px 8px; }
 .med-card__controls { display:flex; flex-direction:column; align-items:flex-end; gap:8px; }
 
+@media (max-width: 360px) {
+    .med-card__controls {
+        width: 100%;
+        align-items: flex-start;
+    }
+    .qty-row {
+        flex-wrap: wrap;
+    }
+}
 .stock-button { font-size:12px; font-weight:700; border:none; cursor:pointer; background:var(--color-primary-light); color:var(--color-primary-dark); padding:5px 12px; border-radius:20px; white-space:nowrap; transition:transform .1s; }
 .stock-button:active { transform:scale(.93); }
 .stock-button--low { background:#fee2e2; color:#dc2626; }

@@ -34,7 +34,7 @@
       <p class="empty-sub" v-if="isOwn">Tap <strong>+ Add Medicine</strong> below to get started.</p>
       <p class="empty-sub" v-else>This member has no medications on their shelf.</p>
     </div>
-
+    
     <div class="med-list" v-else>
       <div class="med-card" v-for="med in medications" :key="med.supply_id">
         <div class="med-card__info">

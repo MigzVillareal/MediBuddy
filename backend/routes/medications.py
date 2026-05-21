@@ -18,10 +18,18 @@ def safe_login_required(fn):
 @login_required
 def add_drug():
     data = request.get_json(force=True)
+    lookup_id = data.get("lookup_id")
+
+    existing = Med_Supply.query.filter_by(
+        user_id=current_user.user_id,
+        lookup_id=lookup_id
+    ).first()
+    if existing:
+        return jsonify({"error": "This medicine is already on your shelf."}), 409
 
     supply = Med_Supply(
         user_id=current_user.user_id,
-        lookup_id=data.get("lookup_id"),
+        lookup_id=lookup_id,
         supply_stock=int(data.get("supply_stock", 0)),
         expiration_date=data.get("expiration_date"),
     )

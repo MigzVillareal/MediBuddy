@@ -401,8 +401,7 @@ async function removeDetail(d) {
 .tab { padding: 20px 20px 100px; }
 
 /* Circle context bar */
-.ctx-bar { display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-bottom:14px; scrollbar-width:none; }
-.ctx-bar::-webkit-scrollbar { display:none; }
+.ctx-bar { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
 .ctx-btn { flex-shrink:0; padding:7px 14px; border-radius:20px; border:2px solid var(--color-border); background:var(--color-white); font-size:13px; font-weight:600; font-family:var(--font-main); color:var(--color-text-muted); cursor:pointer; white-space:nowrap; transition:all .15s; }
 .ctx-btn--active { background:var(--color-primary); border-color:var(--color-primary); color:#fff; }
 .ctx-btn:hover:not(.ctx-btn--active) { border-color:var(--color-primary); color:var(--color-primary); }

@@ -125,11 +125,6 @@
                 <div class="med-row__info">
                   <div class="med-row__name-row">
                     <span class="med-row__name">{{ d.brand_name }}</span>
-                    <span
-                      class="stock-badge"
-                      :class="{ 'stock-badge--low': d.quantity != null && d.quantity <= 5 }"
-                      v-if="d.quantity != null"
-                    >{{ d.quantity }} left</span>
                   </div>
                   <p class="med-row__generic" v-if="d.generic_name">{{ d.generic_name }}</p>
                   <div class="sched-chips">
@@ -143,6 +138,25 @@
                     <span class="chip" v-if="d.date_end">Until {{ formatDate(d.date_end) }}</span>
                   </div>
                 </div>
+
+                <!-- stock controls (owner only) -->
+                <div class="med-row__stock" v-if="isOwn">
+                  <button
+                    class="stock-badge stock-badge--btn"
+                    :class="{ 'stock-badge--low': d.quantity != null && d.quantity <= 5 }"
+                    @click="openNumpad(d)"
+                  >{{ d.quantity != null ? d.quantity + ' left' : '—' }}</button>
+                  <div class="qty-row">
+                    <button class="qty-btn" @click="changeStock(d, -1)" :disabled="d.quantity == null || d.quantity <= 0">−</button>
+                    <button class="qty-btn" @click="changeStock(d, +1)" :disabled="d.quantity == null">+</button>
+                  </div>
+                </div>
+                <span
+                  v-else-if="d.quantity != null"
+                  class="stock-badge"
+                  :class="{ 'stock-badge--low': d.quantity <= 5 }"
+                >{{ d.quantity }} left</span>
+
                 <button
                   class="btn-alarm"
                   :class="d.alarm_active ? 'btn-alarm--on' : 'btn-alarm--off'"
@@ -163,11 +177,38 @@
       </Transition>
     </Teleport>
 
+    <!-- ── NUMPAD SHEET ── -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div class="overlay" v-if="numpadTarget" @click.self="closeNumpad">
+          <Transition name="slide-up">
+            <div class="numpad-sheet" v-if="numpadTarget">
+              <div class="sheet-handle"></div>
+              <p class="numpad-label">{{ numpadTarget.brand_name }}</p>
+              <p class="numpad-sub">Set stock quantity</p>
+              <div class="numpad-display" :class="{ 'numpad-display--low': numpadDisplay !== '0' && +numpadDisplay <= 5 }">
+                <span class="numpad-value">{{ numpadDisplay }}</span>
+                <span class="numpad-unit">pcs</span>
+              </div>
+              <div class="numpad-grid">
+                <button class="numpad-key" v-for="key in ['1','2','3','4','5','6','7','8','9']" :key="key" @click="pressKey(key)">{{ key }}</button>
+                <button class="numpad-key numpad-key--action" @click="pressKey('C')">C</button>
+                <button class="numpad-key" @click="pressKey('0')">0</button>
+                <button class="numpad-key numpad-key--action" @click="pressKey('⌫')">⌫</button>
+              </div>
+              <button class="numpad-confirm" @click="confirmNumpad">✓ &nbsp; Set to {{ numpadDisplay }} pcs</button>
+              <button class="numpad-cancel" @click="closeNumpad">Cancel</button>
+            </div>
+          </Transition>
+        </div>
+      </Transition>
+    </Teleport>
+
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import api from '@/api'
 import { circles, activeCircle, isOwn, loadCircles, selectCircle, selectOwn } from '@/composables/useCircleContext'
 
@@ -184,6 +225,42 @@ const activeRx       = ref(null)
 const rxDetails      = ref([])
 const loadingDetails = ref(false)
 const detailError    = ref('')
+
+// ── NUMPAD (stock editor) ─────────────────────────────────────────────────────
+const numpadTarget  = ref(null)
+const numpadRaw     = ref('')
+const numpadDisplay = computed(() => numpadRaw.value === '' ? '0' : numpadRaw.value)
+
+function openNumpad(d) {
+  numpadTarget.value = d
+  numpadRaw.value    = d.quantity != null && d.quantity > 0 ? String(d.quantity) : ''
+}
+function closeNumpad() { numpadTarget.value = null; numpadRaw.value = '' }
+function pressKey(key) {
+  if (key === 'C')  { numpadRaw.value = ''; return }
+  if (key === '⌫')  { numpadRaw.value = numpadRaw.value.slice(0, -1); return }
+  if (numpadRaw.value.length >= 4) return
+  if (numpadRaw.value === '' && key === '0') return
+  numpadRaw.value += key
+}
+async function confirmNumpad() {
+  const d = numpadTarget.value
+  if (d.supply_id == null) { closeNumpad(); return }
+  const newQty = Math.max(0, parseInt(numpadDisplay.value, 10) || 0)
+  const prev = d.quantity
+  d.quantity = newQty
+  closeNumpad()
+  try { await api.patch(`/meds/drug_stock/${d.supply_id}`, { supply_stock: newQty }) }
+  catch (err) { d.quantity = prev; console.error(err) }
+}
+async function changeStock(d, delta) {
+  if (d.supply_id == null) return
+  const newQty = (d.quantity ?? 0) + delta
+  if (newQty < 0) return
+  d.quantity = newQty
+  try { await api.patch(`/meds/drug_stock/${d.supply_id}`, { supply_stock: newQty }) }
+  catch (err) { d.quantity -= delta; console.error(err) }
+}
 
 // ── HELPERS ────────────────────────────────────────────────────────────────────
 function formatDate(d) {
@@ -403,11 +480,18 @@ async function removeDetail(d) {
 .shelf-hint { background:var(--color-primary-light); border-radius:10px; padding:10px 14px; font-size:12px; color:var(--color-primary-dark); margin-top:8px; }
 
 /* med rows */
-.med-row { display:flex; align-items:flex-start; gap:12px; padding:12px 0; border-bottom:1px solid var(--color-border); }
-.med-row__info { flex:1; }
+.med-row { display:flex; align-items:center; gap:10px; padding:12px 0; border-bottom:1px solid var(--color-border); }
+.med-row__info { flex:1; min-width:0; }
 .med-row__name-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
 .med-row__name { font-size:14px; font-weight:700; color:var(--color-text-dark); }
 .med-row__generic { font-size:12px; color:var(--color-text-muted); margin-top:2px; }
+.med-row__stock { display:flex; flex-direction:column; align-items:flex-end; gap:5px; flex-shrink:0; }
+.stock-badge--btn { cursor:pointer; border:none; font-family:var(--font-main); transition:transform .1s; }
+.stock-badge--btn:active { transform:scale(.93); }
+.qty-row { display:flex; align-items:center; gap:5px; }
+.qty-btn { width:28px; height:28px; border-radius:50%; border:2px solid var(--color-border); background:var(--color-white); font-size:15px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--color-primary); transition:background .15s; }
+.qty-btn:hover { background:var(--color-primary-light); border-color:var(--color-primary); }
+.qty-btn:disabled { opacity:.3; cursor:default; }
 .sched-chips { display:flex; flex-wrap:wrap; gap:5px; margin-top:7px; }
 
 /* stock badge */
@@ -437,6 +521,23 @@ async function removeDetail(d) {
 .btn-primary:disabled { opacity:.6; cursor:not-allowed; }
 .btn-ghost { width:100%; padding:12px; background:none; border:2px solid var(--color-border); border-radius:var(--radius-btn); color:var(--color-text-muted); font-size:14px; font-weight:600; font-family:var(--font-main); cursor:pointer; }
 .err { font-size:13px; color:#ef4444; font-weight:600; }
+
+/* numpad */
+.numpad-sheet { background:var(--color-white); border-radius:24px 24px 0 0; padding:12px 24px 44px; width:100%; max-width:420px; display:flex; flex-direction:column; align-items:center; gap:0; }
+.numpad-label { font-size:16px; font-weight:800; color:var(--color-text-dark); text-align:center; }
+.numpad-sub   { font-size:12px; color:var(--color-text-muted); margin-top:2px; margin-bottom:16px; }
+.numpad-display { width:100%; background:var(--color-primary-light); border-radius:16px; padding:14px 20px; display:flex; align-items:baseline; justify-content:center; gap:8px; margin-bottom:20px; transition:background .2s; }
+.numpad-display--low { background:#fee2e2; }
+.numpad-value { font-size:42px; font-weight:900; color:var(--color-primary-dark); line-height:1; }
+.numpad-display--low .numpad-value { color:#dc2626; }
+.numpad-unit  { font-size:16px; font-weight:600; color:var(--color-text-muted); }
+.numpad-grid  { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; width:100%; margin-bottom:16px; }
+.numpad-key   { height:60px; border-radius:14px; border:none; background:#f1f5f9; color:var(--color-text-dark); font-size:22px; font-weight:700; font-family:var(--font-main); cursor:pointer; transition:background .1s,transform .08s; display:flex; align-items:center; justify-content:center; }
+.numpad-key:active { background:var(--color-primary-light); transform:scale(.92); }
+.numpad-key--action { background:#e2e8f0; color:var(--color-text-muted); font-size:18px; }
+.numpad-confirm { width:100%; padding:15px; border:none; border-radius:var(--radius-btn); background:var(--color-primary); color:#fff; font-size:16px; font-weight:800; font-family:var(--font-main); cursor:pointer; transition:background .2s; margin-bottom:10px; }
+.numpad-confirm:hover { background:var(--color-primary-dark); }
+.numpad-cancel  { width:100%; padding:12px; border:2px solid var(--color-border); border-radius:var(--radius-btn); background:none; color:var(--color-text-muted); font-size:14px; font-weight:600; font-family:var(--font-main); cursor:pointer; }
 
 /* Transitions */
 .fade-enter-active, .fade-leave-active { transition:opacity .22s; }

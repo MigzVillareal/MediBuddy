@@ -134,8 +134,32 @@
               </div>
               <p v-if="detailError" class="err">{{ detailError }}</p>
 
+              <!-- Medicines (owner only — edit stock) -->
+              <template v-if="isOwnCircle && activeCircle.prescription_id">
+                <p class="list-label" style="margin-top:4px">💊 Medicines</p>
+                <div class="hint-sm" v-if="loadingMeds">⏳ Loading…</div>
+                <div class="empty-meds-sm" v-else-if="circleMeds.length === 0">No medicines linked to this prescription yet.</div>
+                <div class="med-row" v-for="med in circleMeds" :key="med.supply_id">
+                  <div class="med-row__info">
+                    <p class="med-row__name">{{ med.brand_name }}</p>
+                    <p class="med-row__generic">{{ med.generic_name }}</p>
+                  </div>
+                  <div class="med-row__controls">
+                    <button
+                      class="stock-btn"
+                      :class="{ 'stock-btn--low': med.supply_stock <= 5 }"
+                      @click="openNumpad(med)"
+                    >{{ med.supply_stock }} left</button>
+                    <div class="qty-row">
+                      <button class="qty-btn" @click="changeStock(med, -1)" :disabled="med.supply_stock <= 0">−</button>
+                      <button class="qty-btn" @click="changeStock(med, +1)">+</button>
+                    </div>
+                  </div>
+                </div>
+              </template>
+
               <!-- Members -->
-              <p class="list-label">Members</p>
+              <p class="list-label" style="margin-top:4px">Members</p>
               <p class="empty-members" v-if="activeMembers.length === 0">No accepted members yet.</p>
               <div class="member-row" v-for="m in activeMembers" :key="m.user_id">
                 <div class="m-avatar">{{ m.username.charAt(0).toUpperCase() }}</div>
@@ -180,6 +204,33 @@
       </Transition>
     </Teleport>
 
+    <!-- ── NUMPAD SHEET (owner stock edit) ── -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div class="overlay" v-if="numpadTarget" @click.self="closeNumpad">
+          <Transition name="slide-up">
+            <div class="numpad-sheet" v-if="numpadTarget">
+              <div class="sheet-handle"></div>
+              <p class="numpad-label">{{ numpadTarget.brand_name }}</p>
+              <p class="numpad-sub">Set stock quantity</p>
+              <div class="numpad-display" :class="{ 'numpad-display--low': numpadDisplay !== '0' && +numpadDisplay <= 5 }">
+                <span class="numpad-value">{{ numpadDisplay }}</span>
+                <span class="numpad-unit">pcs</span>
+              </div>
+              <div class="numpad-grid">
+                <button class="numpad-key" v-for="key in ['1','2','3','4','5','6','7','8','9']" :key="key" @click="pressKey(key)">{{ key }}</button>
+                <button class="numpad-key numpad-key--action" @click="pressKey('C')">C</button>
+                <button class="numpad-key" @click="pressKey('0')">0</button>
+                <button class="numpad-key numpad-key--action" @click="pressKey('⌫')">⌫</button>
+              </div>
+              <button class="numpad-confirm" @click="confirmNumpad">✓ &nbsp; Set to {{ numpadDisplay }} pcs</button>
+              <button class="numpad-cancel" @click="closeNumpad">Cancel</button>
+            </div>
+          </Transition>
+        </div>
+      </Transition>
+    </Teleport>
+
   </div>
 </template>
 
@@ -205,6 +256,41 @@ const isCreating    = ref(false)
 const activeCircle  = ref(null)
 const activeMembers = ref([])
 const detailError   = ref('')
+
+// medicines (owner stock editor)
+const circleMeds  = ref([])
+const loadingMeds = ref(false)
+
+// numpad
+const numpadTarget  = ref(null)
+const numpadRaw     = ref('')
+const numpadDisplay = computed(() => numpadRaw.value === '' ? '0' : numpadRaw.value)
+
+function openNumpad(med) { numpadTarget.value = med; numpadRaw.value = med.supply_stock > 0 ? String(med.supply_stock) : '' }
+function closeNumpad()   { numpadTarget.value = null; numpadRaw.value = '' }
+function pressKey(key) {
+  if (key === 'C')  { numpadRaw.value = ''; return }
+  if (key === '⌫')  { numpadRaw.value = numpadRaw.value.slice(0, -1); return }
+  if (numpadRaw.value.length >= 4) return
+  if (numpadRaw.value === '' && key === '0') return
+  numpadRaw.value += key
+}
+async function confirmNumpad() {
+  const med = numpadTarget.value
+  const newQty = Math.max(0, parseInt(numpadDisplay.value, 10) || 0)
+  const prev = med.supply_stock
+  med.supply_stock = newQty
+  closeNumpad()
+  try { await api.patch(`/meds/drug_stock/${med.supply_id}`, { supply_stock: newQty }) }
+  catch (err) { med.supply_stock = prev; console.error(err) }
+}
+async function changeStock(med, delta) {
+  const newQty = med.supply_stock + delta
+  if (newQty < 0) return
+  med.supply_stock = newQty
+  try { await api.patch(`/meds/drug_stock/${med.supply_id}`, { supply_stock: newQty }) }
+  catch (err) { med.supply_stock -= delta; console.error(err) }
+}
 
 // invite form
 const inviteUsername   = ref('')
@@ -283,12 +369,18 @@ async function openDetail(c) {
   detailError.value    = ''
   inviteUsername.value = ''
   inviteError.value    = ''
-  await Promise.all([loadMembers(), loadSentInvites()])
+  const isOwned = circles.value.some(x => x.circle_id === c.circle_id)
+  await Promise.all([
+    loadMembers(),
+    loadSentInvites(),
+    isOwned ? loadCircleMeds() : Promise.resolve(),
+  ])
 }
 
 function closeDetail() {
   activeCircle.value  = null
   activeMembers.value = []
+  circleMeds.value    = []
 }
 
 async function loadMembers() {
@@ -296,6 +388,15 @@ async function loadMembers() {
   try {
     activeMembers.value = (await api.get(`/circle/${activeCircle.value.circle_id}/members`)).data
   } catch (e) { console.error('loadMembers', e) }
+}
+
+async function loadCircleMeds() {
+  if (!activeCircle.value) return
+  loadingMeds.value = true
+  try {
+    circleMeds.value = (await api.get(`/circle/${activeCircle.value.circle_id}/shelf`)).data
+  } catch (e) { console.error('loadCircleMeds', e) }
+  finally { loadingMeds.value = false }
 }
 
 // ── DELETE ─────────────────────────────────────────────────────────
@@ -423,6 +524,22 @@ async function removeMember(member) {
 /* list-label */
 .list-label { font-size:11px; font-weight:700; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:4px; margin-top:4px; }
 .empty-members { font-size:13px; color:var(--color-text-muted); }
+.hint-sm { font-size:13px; color:var(--color-text-muted); padding:4px 0; }
+.empty-meds-sm { font-size:13px; color:var(--color-text-muted); padding:4px 0; }
+
+/* medicine rows (owner stock editor) */
+.med-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--color-border); }
+.med-row__info { flex:1; }
+.med-row__name { font-size:14px; font-weight:700; color:var(--color-text-dark); }
+.med-row__generic { font-size:12px; color:var(--color-text-muted); margin-top:1px; }
+.med-row__controls { display:flex; flex-direction:column; align-items:flex-end; gap:6px; flex-shrink:0; }
+.stock-btn { font-size:12px; font-weight:700; border:none; cursor:pointer; background:var(--color-primary-light); color:var(--color-primary-dark); padding:4px 10px; border-radius:20px; white-space:nowrap; transition:transform .1s; }
+.stock-btn:active { transform:scale(.93); }
+.stock-btn--low { background:#fee2e2; color:#dc2626; }
+.qty-row { display:flex; align-items:center; gap:6px; }
+.qty-btn { width:30px; height:30px; border-radius:50%; border:2px solid var(--color-border); background:var(--color-white); font-size:16px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--color-primary); transition:background .15s; }
+.qty-btn:hover { background:var(--color-primary-light); border-color:var(--color-primary); }
+.qty-btn:disabled { opacity:.3; cursor:default; }
 
 /* member rows */
 .member-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--color-border); }
@@ -430,6 +547,23 @@ async function removeMember(member) {
 .m-info { flex:1; }
 .m-name { font-size:14px; font-weight:700; color:var(--color-text-dark); }
 .perm-select { padding:6px 10px; border-radius:8px; border:2px solid var(--color-border); background:var(--color-input-bg); font-size:12px; font-family:var(--font-main); color:var(--color-text-dark); cursor:pointer; }
+
+/* numpad */
+.numpad-sheet { background:var(--color-white); border-radius:24px 24px 0 0; padding:12px 24px 44px; width:100%; max-width:420px; display:flex; flex-direction:column; align-items:center; gap:0; }
+.numpad-label { font-size:16px; font-weight:800; color:var(--color-text-dark); text-align:center; }
+.numpad-sub   { font-size:12px; color:var(--color-text-muted); margin-top:2px; margin-bottom:16px; }
+.numpad-display { width:100%; background:var(--color-primary-light); border-radius:16px; padding:14px 20px; display:flex; align-items:baseline; justify-content:center; gap:8px; margin-bottom:20px; transition:background .2s; }
+.numpad-display--low { background:#fee2e2; }
+.numpad-value { font-size:42px; font-weight:900; color:var(--color-primary-dark); line-height:1; }
+.numpad-display--low .numpad-value { color:#dc2626; }
+.numpad-unit  { font-size:16px; font-weight:600; color:var(--color-text-muted); }
+.numpad-grid  { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; width:100%; margin-bottom:16px; }
+.numpad-key   { height:60px; border-radius:14px; border:none; background:#f1f5f9; color:var(--color-text-dark); font-size:22px; font-weight:700; font-family:var(--font-main); cursor:pointer; transition:background .1s,transform .08s; display:flex; align-items:center; justify-content:center; }
+.numpad-key:active { background:var(--color-primary-light); transform:scale(.92); }
+.numpad-key--action { background:#e2e8f0; color:var(--color-text-muted); font-size:18px; }
+.numpad-confirm { width:100%; padding:15px; border:none; border-radius:var(--radius-btn); background:var(--color-primary); color:#fff; font-size:16px; font-weight:800; font-family:var(--font-main); cursor:pointer; transition:background .2s; margin-bottom:10px; }
+.numpad-confirm:hover { background:var(--color-primary-dark); }
+.numpad-cancel  { width:100%; padding:12px; border:2px solid var(--color-border); border-radius:var(--radius-btn); background:none; color:var(--color-text-muted); font-size:14px; font-weight:600; font-family:var(--font-main); cursor:pointer; }
 
 /* sent invites */
 .sent-row { display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--color-border); }

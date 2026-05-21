@@ -309,18 +309,26 @@ async function createRx() {
 
 // ── ALARM TOGGLES ──────────────────────────────────────────────────────────────
 
+async function getOneSignalId() {
+  try { 
+    if (!window.OneSignal) return null
+    if (Notification.permission !== 'granted') {
+      await window.OneSignal.Notifications.requestPermission()
+    }
+    const sub = window.OneSignal.User.PushSubscription
+    return sub.id || sub.fe || null
+  } catch (e) {
+    console.warn('OneSignal not available:', e)
+    return null
+  }
+}
+
 // Toggle alarm on the prescription itself (header bell)
 async function toggleRxAlarm(rx) {
   const prev = rx.alarm_active
   rx.alarm_active = !prev
   try {
-    let onesignal_id = null
-    if (!prev) {
-      try {
-        await window.OneSignal.Notifications.requestPermission()
-        onesignal_id = window.OneSignal.User.PushSubscription.id
-      } catch (e) { console.warn('OneSignal not available:', e) }
-    }
+    const onesignal_id = !prev ? await getOneSignalId() : null
     const res = await api.patch(`/prescriptions/${rx.prescription_id}/alarm`, { onesignal_id })
     rx.alarm_active = res.data.alarm_active
   } catch (e) {
@@ -329,18 +337,11 @@ async function toggleRxAlarm(rx) {
   }
 }
 
-// Toggle alarm on a prescription detail (individual medicine row)
 async function toggleDetailAlarm(d) {
   const prev = d.alarm_active
   d.alarm_active = !prev
   try {
-    let onesignal_id = null
-    if (!prev) {
-      try {
-        await window.OneSignal.Notifications.requestPermission()
-        onesignal_id = window.OneSignal.User.PushSubscription.id
-      } catch (e) { console.warn('OneSignal not available:', e) }
-    }
+    const onesignal_id = !prev ? await getOneSignalId() : null
     const res = await api.patch(
       `/prescriptions/${activeRx.value.prescription_id}/details/${d.prescription_detail_id}/alarm`,
       { onesignal_id }
@@ -351,7 +352,6 @@ async function toggleDetailAlarm(d) {
     console.error('Failed to toggle detail alarm:', e)
   }
 }
-
 // ── DETAIL ─────────────────────────────────────────────────────────────────────
 async function openDetail(rx) {
   activeRx.value    = rx

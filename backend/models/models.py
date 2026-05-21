@@ -65,7 +65,8 @@ class Prescription(db.Model):
 
     # relationships
     user: so.Mapped["User"] = so.relationship("User", back_populates="prescriptions")
-    prescription_details: so.Mapped[List["Prescription_Detail"]] = so.relationship("Prescription_Detail", back_populates="prescription")
+    prescription_details: so.Mapped[List["Prescription_Detail"]] = so.relationship("Prescription_Detail", back_populates="prescription", cascade="all, delete-orphan")
+    circle: so.Mapped[Optional["Circle"]] = so.relationship("Circle", back_populates="prescription", cascade="all, delete-orphan", uselist=False)
 
 
 # ── PRESCRIPTION_DETAIL ───────────────────────────────────────────────────────
@@ -140,8 +141,8 @@ class Circle(db.Model):
 
     # relationships
     owner: so.Mapped["User"] = so.relationship("User", foreign_keys=[owner_id])
-    prescription: so.Mapped["Prescription"] = so.relationship("Prescription")
-    members: so.Mapped[List["CircleMember"]] = so.relationship("CircleMember", back_populates="circle")
+    prescription: so.Mapped["Prescription"] = so.relationship("Prescription", back_populates="circle")
+    members: so.Mapped[List["CircleMember"]] = so.relationship("CircleMember", back_populates="circle", cascade="all, delete-orphan")
 
     @property
     def circle_name(self):

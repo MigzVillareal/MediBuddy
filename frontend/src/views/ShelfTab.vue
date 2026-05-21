@@ -1,14 +1,38 @@
 <template>
   <div class="tab">
-    <h2 class="section-title">My Shelf</h2>
+    <!-- Circle context switcher -->
+    <div class="ctx-bar" v-if="circles.length > 0">
+      <button
+        class="ctx-btn"
+        :class="{ 'ctx-btn--active': isOwn }"
+        @click="selectOwn(); fetchMedications()"
+      >🗂 My Shelf</button>
+      <button
+        v-for="c in circles" :key="c.circle_id"
+        class="ctx-btn"
+        :class="{ 'ctx-btn--active': activeCircle?.circle_id === c.circle_id }"
+        @click="selectCircle(c); fetchMedications()"
+      >👤 {{ c.circle_name }}</button>
+    </div>
+
+    <!-- Read-only banner -->
+    <div class="readonly-banner" v-if="!isOwn && !canEdit">
+      👁 Viewing <strong>{{ activeCircle.owner_username }}</strong>'s shelf — read only
+    </div>
+    <div class="edit-banner" v-else-if="!isOwn && canEdit">
+      📦 Viewing <strong>{{ activeCircle.owner_username }}</strong>'s shelf — can update stock only
+    </div>
+
+    <h2 class="section-title">{{ isOwn ? 'My Shelf' : activeCircle.owner_username + "'s Shelf" }}</h2>
 
     <div class="hint" v-if="loading">
-      <span class="hint-icon">⏳</span><p>Loading your medications...</p>
+      <span class="hint-icon">⏳</span><p>Loading medications...</p>
     </div>
     <div class="empty-state" v-else-if="medications.length === 0">
       <span class="empty-icon">💊</span>
       <p class="empty-title">No medications yet</p>
-      <p class="empty-sub">Tap <strong>+ Add Medicine</strong> below to get started.</p>
+      <p class="empty-sub" v-if="isOwn">Tap <strong>+ Add Medicine</strong> below to get started.</p>
+      <p class="empty-sub" v-else>This member has no medications on their shelf.</p>
     </div>
 
     <div class="med-list" v-else>
@@ -22,20 +46,23 @@
           <span class="med-card__exp" v-if="med.expiration_date">Expiry: {{ med.expiration_date }}</span>
         </div>
         <div class="med-card__controls">
-          <button class="stock-button" :class="{ 'stock-button--low': med.supply_stock <= 5 }" @click="openNumpad(med)">
-            {{ med.supply_stock }} left
-          </button>
-          <div class="qty-row">
+          <button
+            class="stock-button"
+            :class="{ 'stock-button--low': med.supply_stock <= 5 }"
+            @click="canEdit ? openNumpad(med) : null"
+            :style="!canEdit ? 'cursor:default' : ''"
+          >{{ med.supply_stock }} left</button>
+          <div class="qty-row" v-if="canEdit">
             <button class="qty-btn" @click="changeStock(med, -1)" :disabled="med.supply_stock <= 0">−</button>
             <button class="qty-btn" @click="changeStock(med, +1)">+</button>
-            <button class="btn-delete" @click="deleteMed(med)">🗑</button>
-            <button class="btn-add-to-rx" @click="openRxPicker(med)">+ Add to Rx</button>
+            <button class="btn-delete" v-if="isOwn" @click="deleteMed(med)">🗑</button>
+            <button class="btn-add-to-rx" v-if="isOwn" @click="openRxPicker(med)">+ Add to Rx</button>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="add-btn-wrap">
+    <div class="add-btn-wrap" v-if="isOwn">
       <router-link to="/medicine-search" class="btn-add">+ Add Medicine</router-link>
     </div>
 
@@ -165,8 +192,9 @@
 </template>
 
 <script setup>
-import { ref, computed, reactive, onMounted } from 'vue'
+import { ref, computed, reactive, onMounted, watch } from 'vue'
 import api from '@/api'
+import { circles, activeCircle, isOwn, canEdit, loadCircles, selectCircle, selectOwn } from '@/composables/useCircleContext'
 
 const medications = ref([])
 const loading     = ref(true)
@@ -192,8 +220,13 @@ async function confirmNumpad() {
   const prev = med.supply_stock
   med.supply_stock = newQty
   closeNumpad()
-  try { await api.patch(`/meds/drug_stock/${med.supply_id}`, { supply_stock: newQty }) }
-  catch (err) { med.supply_stock = prev; console.error(err) }
+  try {
+    if (activeCircle.value) {
+      await api.patch(`/circle/${activeCircle.value.circle_id}/shelf/${med.supply_id}`, { supply_stock: newQty })
+    } else {
+      await api.patch(`/meds/drug_stock/${med.supply_id}`, { supply_stock: newQty })
+    }
+  } catch (err) { med.supply_stock = prev; console.error(err) }
 }
 function truncateAtBracket(str) {
   if (!str) return ''
@@ -209,8 +242,13 @@ async function changeStock(med, delta) {
   const newQty = med.supply_stock + delta
   if (newQty < 0) return
   med.supply_stock = newQty
-  try { await api.patch(`/meds/drug_stock/${med.supply_id}`, { supply_stock: newQty }) }
-  catch (err) { med.supply_stock -= delta; console.error(err) }
+  try {
+    if (activeCircle.value) {
+      await api.patch(`/circle/${activeCircle.value.circle_id}/shelf/${med.supply_id}`, { supply_stock: newQty })
+    } else {
+      await api.patch(`/meds/drug_stock/${med.supply_id}`, { supply_stock: newQty })
+    }
+  } catch (err) { med.supply_stock -= delta; console.error(err) }
 }
 
 // ── Delete ──────────────────────────────────────────────────────
@@ -223,11 +261,16 @@ async function deleteMed(med) {
 // ── Fetch ───────────────────────────────────────────────────────
 async function fetchMedications() {
   loading.value = true
-  try { medications.value = (await api.get('/meds/drug_stock')).data }
-  catch (err) { console.error(err) }
+  try {
+    if (activeCircle.value) {
+      medications.value = (await api.get(`/circle/${activeCircle.value.circle_id}/shelf`)).data
+    } else {
+      medications.value = (await api.get('/meds/drug_stock')).data
+    }
+  } catch (err) { console.error(err) }
   finally { loading.value = false }
 }
-onMounted(fetchMedications)
+onMounted(async () => { await loadCircles(); await fetchMedications() })
 
 // ── Add to Rx flow ──────────────────────────────────────────────
 const showRxPicker  = ref(false)
@@ -316,6 +359,16 @@ async function submitAddToRx() {
 
 <style scoped>
 .tab { padding: 20px 20px 140px; }
+
+/* Circle context bar */
+.ctx-bar { display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-bottom:14px; scrollbar-width:none; }
+.ctx-bar::-webkit-scrollbar { display:none; }
+.ctx-btn { flex-shrink:0; padding:7px 14px; border-radius:20px; border:2px solid var(--color-border); background:var(--color-white); font-size:13px; font-weight:600; font-family:var(--font-main); color:var(--color-text-muted); cursor:pointer; white-space:nowrap; transition:all .15s; }
+.ctx-btn--active { background:var(--color-primary); border-color:var(--color-primary); color:#fff; }
+.ctx-btn:hover:not(.ctx-btn--active) { border-color:var(--color-primary); color:var(--color-primary); }
+.readonly-banner { background:#fef9c3; border:1.5px solid #fde68a; border-radius:10px; padding:9px 14px; font-size:13px; color:#92400e; margin-bottom:12px; }
+.edit-banner     { background:#dcfce7; border:1.5px solid #86efac; border-radius:10px; padding:9px 14px; font-size:13px; color:#166534; margin-bottom:12px; }
+
 .section-title { font-size:20px; font-weight:800; color:var(--color-text-dark); margin-bottom:16px; }
 .hint,.empty-state { text-align:center; padding:60px 20px; color:var(--color-text-muted); }
 .hint-icon,.empty-icon { font-size:48px; display:block; margin-bottom:12px; }

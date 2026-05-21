@@ -1,13 +1,25 @@
 <template>
   <div class="tab">
 
+    <!-- Circle context switcher -->
+    <div class="ctx-bar" v-if="circles.length > 0">
+      <button class="ctx-btn" :class="{ 'ctx-btn--active': isOwn }" @click="selectOwn(); loadPrescriptions()">📁 My Rx</button>
+      <button
+        v-for="c in circles" :key="c.circle_id"
+        class="ctx-btn"
+        :class="{ 'ctx-btn--active': activeCircle?.circle_id === c.circle_id }"
+        @click="selectCircle(c); loadPrescriptions()"
+      >👤 {{ c.circle_name }}</button>
+    </div>
+    <div class="readonly-banner" v-if="!isOwn">👁 Viewing <strong>{{ activeCircle.owner_username }}</strong>’s prescriptions — read only</div>
+
     <!-- ── HEADER ────────────────────────────────────────────── -->
     <div class="header-row">
       <div>
-        <h2 class="section-title">Prescriptions</h2>
-        <p class="section-sub">Your doctor-issued prescriptions and medication schedules.</p>
+        <h2 class="section-title">{{ isOwn ? 'Prescriptions' : activeCircle.owner_username + "'s Rx" }}</h2>
+        <p class="section-sub">Doctor-issued prescriptions and medication schedules.</p>
       </div>
-      <button class="btn-new" @click="openCreate">+ New Rx</button>
+      <button class="btn-new" v-if="isOwn" @click="openCreate">+ New Rx</button>
     </div>
 
     <!-- ── EMPTY / LOADING ───────────────────────────────────── -->
@@ -96,14 +108,14 @@
                   <p class="detail-meta" v-if="activeRx.detail">{{ activeRx.detail }}</p>
                 </div>
                 <div class="detail-header__actions">
-                  <!-- Alarm toggle inside detail -->
                   <button
+                    v-if="isOwn"
                     class="btn-alarm btn-alarm--lg"
                     :class="activeRx.alarm_active ? 'btn-alarm--on' : 'btn-alarm--off'"
                     @click="toggleAlarm(activeRx)"
                     :title="activeRx.alarm_active ? 'Disable notifications' : 'Enable notifications'"
                   >{{ activeRx.alarm_active ? '🔔' : '🔕' }}</button>
-                  <button class="btn-del-rx" @click="deleteRx" title="Delete prescription">🗑</button>
+                  <button class="btn-del-rx" v-if="isOwn" @click="deleteRx" title="Delete prescription">🗑</button>
                 </div>
               </div>
 
@@ -136,7 +148,7 @@
                     </span>
                   </div>
                 </div>
-                <button class="btn-remove" @click="removeDetail(d)" title="Remove from prescription">✕</button>
+                <button class="btn-remove" v-if="isOwn" @click="removeDetail(d)" title="Remove from prescription">✕</button>
               </div>
 
               <div class="shelf-hint" v-if="rxDetails.length > 0">
@@ -156,6 +168,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import api from '@/api'
+import { circles, activeCircle, isOwn, canEdit, loadCircles, selectCircle, selectOwn } from '@/composables/useCircleContext'
 
 // ── STATE ──────────────────────────────────────────────────────────────────────
 const prescriptions   = ref([])
@@ -178,11 +191,16 @@ function formatDate(d) {
 }
 
 // ── INIT ───────────────────────────────────────────────────────────────────────
-onMounted(loadPrescriptions)
+onMounted(async () => { await loadCircles(); await loadPrescriptions() })
 
 async function loadPrescriptions() {
   loading.value = true
-  try { prescriptions.value = (await api.get('/prescriptions/')).data }
+  try {
+    const url = activeCircle.value
+      ? `/circle/${activeCircle.value.circle_id}/prescriptions`
+      : '/prescriptions/'
+    prescriptions.value = (await api.get(url)).data
+  }
   catch (e) { console.error(e) }
   finally { loading.value = false }
 }
@@ -215,17 +233,19 @@ async function createRx() {
 // ── ALARM TOGGLE ───────────────────────────────────────────────────────────────
 async function toggleAlarm(rx) {
   const prev = rx.alarm_active
-  rx.alarm_active = !prev   // optimistic
+  rx.alarm_active = !prev
   try {
-    const res = await api.patch(`/prescriptions/${rx.prescription_id}/alarm`)
+    const url = activeCircle.value
+      ? `/circle/${activeCircle.value.circle_id}/prescriptions/${rx.prescription_id}/alarm`
+      : `/prescriptions/${rx.prescription_id}/alarm`
+    const res = await api.patch(url)
     rx.alarm_active = res.data.alarm_active
-    // Keep activeRx in sync if the detail sheet is open
     if (activeRx.value?.prescription_id === rx.prescription_id) {
       activeRx.value.alarm_active = rx.alarm_active
       rxDetails.value.forEach(d => d.alarm_active = rx.alarm_active)
     }
   } catch (e) {
-    rx.alarm_active = prev  // revert on error
+    rx.alarm_active = prev
     console.error('Failed to toggle alarm:', e)
   }
 }
@@ -246,7 +266,10 @@ async function loadDetails() {
   if (!activeRx.value) return
   loadingDetails.value = true
   try {
-    rxDetails.value = (await api.get(`/prescriptions/${activeRx.value.prescription_id}/details`)).data
+    const url = activeCircle.value
+      ? `/circle/${activeCircle.value.circle_id}/prescriptions/${activeRx.value.prescription_id}/details`
+      : `/prescriptions/${activeRx.value.prescription_id}/details`
+    rxDetails.value = (await api.get(url)).data
   } catch (e) { console.error(e) }
   finally { loadingDetails.value = false }
 }
@@ -263,7 +286,10 @@ async function deleteRx() {
 async function removeDetail(d) {
   if (!confirm(`Remove ${d.brand_name} from this prescription?`)) return
   try {
-    await api.delete(`/prescriptions/${activeRx.value.prescription_id}/details/${d.prescription_detail_id}`)
+    const url = activeCircle.value
+      ? `/circle/${activeCircle.value.circle_id}/prescriptions/${activeRx.value.prescription_id}/details/${d.prescription_detail_id}`
+      : `/prescriptions/${activeRx.value.prescription_id}/details/${d.prescription_detail_id}`
+    await api.delete(url)
     await loadDetails()
   } catch (e) { detailError.value = e.response?.data?.error || 'Remove failed.' }
 }
@@ -355,6 +381,15 @@ async function addDetail() {
 
 <style scoped>
 .tab { padding: 20px 20px 100px; }
+
+/* Circle context bar */
+.ctx-bar { display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-bottom:14px; scrollbar-width:none; }
+.ctx-bar::-webkit-scrollbar { display:none; }
+.ctx-btn { flex-shrink:0; padding:7px 14px; border-radius:20px; border:2px solid var(--color-border); background:var(--color-white); font-size:13px; font-weight:600; font-family:var(--font-main); color:var(--color-text-muted); cursor:pointer; white-space:nowrap; transition:all .15s; }
+.ctx-btn--active { background:var(--color-primary); border-color:var(--color-primary); color:#fff; }
+.ctx-btn:hover:not(.ctx-btn--active) { border-color:var(--color-primary); color:var(--color-primary); }
+.readonly-banner { background:#fef9c3; border:1.5px solid #fde68a; border-radius:10px; padding:9px 14px; font-size:13px; color:#92400e; margin-bottom:12px; }
+.edit-banner     { background:#dcfce7; border:1.5px solid #86efac; border-radius:10px; padding:9px 14px; font-size:13px; color:#166534; margin-bottom:12px; }
 
 /* header */
 .header-row { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:18px; }

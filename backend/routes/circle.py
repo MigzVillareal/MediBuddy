@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from extensions import db
-from models import Circle, CircleMember, User
+from models import Circle, CircleMember, User, Med_Supply, Med_Lookup, Prescription, Prescription_Detail
 
 circle_bp = Blueprint("circle", __name__)
 
@@ -41,13 +41,14 @@ def get_joined_circles():
             continue          # skip circles they own (already in /mine)
         owner = db.session.get(User, circle.owner_id)
         result.append({
-            "circle_id":    circle.circle_id,
-            "circle_name":  circle.circle_name,
+            "circle_id":      circle.circle_id,
+            "circle_name":    circle.circle_name,
+            "owner_user_id":  circle.owner_id,
             "owner_username": owner.username if owner else "Unknown",
-            "permission":   m.permission,
-            "member_count": CircleMember.query.filter_by(
-                                circle_id=circle.circle_id, status="accepted"
-                            ).count(),
+            "permission":     m.permission,
+            "member_count":   CircleMember.query.filter_by(
+                                  circle_id=circle.circle_id, status="accepted"
+                              ).count(),
         })
     return jsonify(result)
 
@@ -294,3 +295,176 @@ def respond_invite(circle_member_id):
 
     db.session.commit()
     return jsonify({"message": f"Invite {row.status}"})
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CIRCLE DATA ACCESS  (member views/edits the circle owner's data)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _check_member(circle_id):
+    """Return (circle, member_row) or raise a jsonify error tuple."""
+    circle = db.session.get(Circle, circle_id)
+    if not circle:
+        return None, None, (jsonify({"error": "Circle not found"}), 404)
+    member = CircleMember.query.filter_by(
+        circle_id=circle_id, user_id=current_user.user_id, status="accepted"
+    ).first()
+    if not member:
+        return None, None, (jsonify({"error": "Not authorized"}), 403)
+    return circle, member, None
+
+
+# ── SHELF ─────────────────────────────────────────────────────────────────────
+
+@circle_bp.route("/<int:circle_id>/shelf", methods=["GET"])
+@login_required
+def circle_shelf(circle_id):
+    """Return the circle owner's medication shelf to an accepted member."""
+    circle, member, err = _check_member(circle_id)
+    if err:
+        return err
+
+    supplies = Med_Supply.query.filter_by(user_id=circle.owner_id).all()
+    result = []
+    for s in supplies:
+        med = db.session.get(Med_Lookup, s.lookup_id)
+        result.append({
+            "supply_id":       s.supply_id,
+            "supply_stock":    s.supply_stock,
+            "expiration_date": s.expiration_date.isoformat() if s.expiration_date else None,
+            "lookup_id":       s.lookup_id,
+            "brand_name":      med.brand_name      if med else None,
+            "generic_name":    med.generic_name    if med else None,
+            "dosage_strength": med.dosage_strength if med else None,
+            "dosage_form":     med.dosage_form     if med else None,
+            "category":        med.category        if med else None,
+        })
+    return jsonify(result)
+
+
+@circle_bp.route("/<int:circle_id>/shelf/<int:supply_id>", methods=["PATCH"])
+@login_required
+def circle_update_stock(circle_id, supply_id):
+    """Update a supply's stock — canedit members only."""
+    circle, member, err = _check_member(circle_id)
+    if err:
+        return err
+    if member.permission != "canedit":
+        return jsonify({"error": "You only have view permission"}), 403
+
+    supply = db.session.get(Med_Supply, supply_id)
+    if not supply or supply.user_id != circle.owner_id:
+        return jsonify({"error": "Supply not found"}), 404
+
+    data = request.get_json()
+    supply.supply_stock = max(0, int(data.get("supply_stock", supply.supply_stock)))
+    db.session.commit()
+    return jsonify({"supply_stock": supply.supply_stock})
+
+
+# ── PRESCRIPTIONS ─────────────────────────────────────────────────────────────
+
+@circle_bp.route("/<int:circle_id>/prescriptions", methods=["GET"])
+@login_required
+def circle_prescriptions(circle_id):
+    """Return the circle owner's prescriptions to an accepted member."""
+    circle, member, err = _check_member(circle_id)
+    if err:
+        return err
+
+    rxs = Prescription.query.filter_by(user_id=circle.owner_id).order_by(
+        Prescription.prescription_id.desc()
+    ).all()
+    return jsonify([
+        {
+            "prescription_id": rx.prescription_id,
+            "name":         rx.name,
+            "date":         rx.date.isoformat() if rx.date else None,
+            "doctor":       rx.doctor,
+            "detail":       rx.detail,
+            "alarm_active": rx.alarm.is_active if rx.alarm else False,
+        }
+        for rx in rxs
+    ])
+
+
+@circle_bp.route("/<int:circle_id>/prescriptions/<int:rx_id>/details", methods=["GET"])
+@login_required
+def circle_prescription_details(circle_id, rx_id):
+    """Return prescription details (medicines) for the circle owner's prescription."""
+    circle, member, err = _check_member(circle_id)
+    if err:
+        return err
+
+    rx = db.session.get(Prescription, rx_id)
+    if not rx or rx.user_id != circle.owner_id:
+        return jsonify({"error": "Prescription not found"}), 404
+
+    details = Prescription_Detail.query.filter_by(prescription_id=rx_id).all()
+    alarm   = Alarm.query.filter_by(prescription_id=rx_id).first()
+    result  = []
+    for d in details:
+        supply = db.session.get(Med_Supply, d.supply_id) if d.supply_id else None
+        med    = supply.medicine if supply else None
+        result.append({
+            "prescription_detail_id": d.prescription_detail_id,
+            "supply_id":    d.supply_id,
+            "brand_name":   med.brand_name    if med else None,
+            "generic_name": med.generic_name  if med else None,
+            "dosage_form":  med.dosage_form   if med else None,
+            "supply_stock": supply.supply_stock if supply else None,
+            "date_start":   d.date_start.isoformat() if d.date_start else None,
+            "date_end":     d.date_end.isoformat()   if d.date_end   else None,
+            "time_taken":   d.time_taken,
+            "days_taken":   d.days_taken,
+            "alarm_active": alarm.is_active if alarm else False,
+        })
+    return jsonify(result)
+
+
+@circle_bp.route("/<int:circle_id>/prescriptions/<int:rx_id>/alarm", methods=["PATCH"])
+@login_required
+def circle_toggle_alarm(circle_id, rx_id):
+    """Toggle alarm for the owner's prescription — canedit only."""
+    circle, member, err = _check_member(circle_id)
+    if err:
+        return err
+    if member.permission != "canedit":
+        return jsonify({"error": "You only have view permission"}), 403
+
+    rx = db.session.get(Prescription, rx_id)
+    if not rx or rx.user_id != circle.owner_id:
+        return jsonify({"error": "Prescription not found"}), 404
+
+    alarm = Alarm.query.filter_by(prescription_id=rx_id).first()
+    if not alarm:
+        alarm = Alarm(is_active=False, prescription_id=rx_id)
+        db.session.add(alarm)
+        db.session.flush()
+
+    alarm.is_active = not alarm.is_active
+    db.session.commit()
+    return jsonify({"alarm_active": alarm.is_active})
+
+
+@circle_bp.route("/<int:circle_id>/prescriptions/<int:rx_id>/details/<int:detail_id>", methods=["DELETE"])
+@login_required
+def circle_remove_detail(circle_id, rx_id, detail_id):
+    """Remove a medicine from the owner's prescription — canedit only."""
+    circle, member, err = _check_member(circle_id)
+    if err:
+        return err
+    if member.permission != "canedit":
+        return jsonify({"error": "You only have view permission"}), 403
+
+    rx = db.session.get(Prescription, rx_id)
+    if not rx or rx.user_id != circle.owner_id:
+        return jsonify({"error": "Prescription not found"}), 404
+
+    detail = db.session.get(Prescription_Detail, detail_id)
+    if not detail or detail.prescription_id != rx_id:
+        return jsonify({"error": "Detail not found"}), 404
+
+    db.session.delete(detail)
+    db.session.commit()
+    return jsonify({"message": "Medicine removed"})

@@ -12,14 +12,17 @@ prescriptions_bp = Blueprint("prescriptions", __name__)
 
 ONESIGNAL_APP_ID  = os.getenv("ONESIGNAL_APP_ID")
 ONESIGNAL_API_KEY = os.getenv("ONESIGNAL_API_KEY")
-DATABASE_URL      = os.getenv("DATABASE_URL", "sqlite:///app.db")
 
-# ── SCHEDULER (persistent job store so jobs survive restarts) ─────────────────
-jobstores = {
-    'default': SQLAlchemyJobStore(url=DATABASE_URL)
-}
-scheduler = BackgroundScheduler(jobstores=jobstores)
-scheduler.start()
+_scheduler = None
+
+def get_scheduler():
+    global _scheduler
+    if _scheduler is None:
+        from config import Config
+        jobstores = {'default': SQLAlchemyJobStore(url=Config.SQLALCHEMY_DATABASE_URI)}
+        _scheduler = BackgroundScheduler(jobstores=jobstores)
+        _scheduler.start()
+    return _scheduler
 
 # ── HELPERS ───────────────────────────────────────────────────────────────────
 
@@ -95,29 +98,29 @@ def debug_onesignal_ids():
     } for d in details])
 
 def schedule_detail_jobs(detail, onesignal_id):
-    """Schedule cron jobs for every time in detail.time_taken. Returns job_reference string."""
+    sched    = get_scheduler()
     supply   = db.session.get(Med_Supply, detail.supply_id) if detail.supply_id else None
     med_name = supply.medicine.brand_name if supply and supply.medicine else 'your medicine'
     job_ids  = []
     for time_str in detail.time_taken.split(','):
         hour, minute = map(int, time_str.strip().split(':'))
         job_id = f"reminder_{detail.prescription_detail_id}_{time_str.strip()}"
-        scheduler.add_job(
+        sched.add_job(
             send_notification, 'cron',
             day_of_week=parse_days(detail.days_taken),
             hour=hour, minute=minute,
             args=[onesignal_id, med_name, detail.prescription_detail_id],
             id=job_id, replace_existing=True,
-)
+        )
         job_ids.append(job_id)
-    detail.alarm_active = True 
+    detail.alarm_active = True
     return ','.join(job_ids)
 
 def cancel_detail_jobs(detail):
     if detail.job_reference:
         for job_id in detail.job_reference.split(','):
             try:
-                scheduler.remove_job(job_id.strip())
+                get_scheduler().remove_job(job_id.strip())
             except Exception:
                 pass
     detail.job_reference = None

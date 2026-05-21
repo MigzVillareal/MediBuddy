@@ -31,25 +31,25 @@ def parse_days(days_taken):
     }
     return mapping.get(days_taken, 'mon,tue,wed,thu,fri,sat,sun')
 
-# def send_notification(onesignal_id, medication):
-#     try:
-#         response = requests.post(
-#             'https://onesignal.com/api/v1/notifications',
-#             headers={
-#                 'Authorization': f'Basic {ONESIGNAL_API_KEY}',
-#                 'Content-Type': 'application/json',
-#             },
-#             json={
-#                 'app_id': ONESIGNAL_APP_ID,
-#                 'target_channel': 'push',
-#                 'include_aliases': {'onesignal_id': [onesignal_id]},
-#                 'contents': {'en': f'Time to take your {medication}!'},
-#                 'headings': {'en': 'MediBuddy Reminder'},
-#             }
-#         )
-#         print(f"OneSignal response: {response.status_code} {response.text}")
-#     except Exception as e:
-#         print(f"OneSignal notification failed: {e}")
+def send_notification(onesignal_id, medication):
+    try:
+        response = requests.post(
+            'https://onesignal.com/api/v1/notifications',
+            headers={
+                'Authorization': f'Basic {ONESIGNAL_API_KEY}',
+                'Content-Type': 'application/json',
+            },
+            json={
+                'app_id': ONESIGNAL_APP_ID,
+                'target_channel': 'push',
+                'include_aliases': {'onesignal_id': [onesignal_id]},
+                'contents': {'en': f'Time to take your {medication}!'},
+                'headings': {'en': 'MediBuddy Reminder'},
+            }
+        )
+        print(f"OneSignal response: {response.status_code} {response.text}")
+    except Exception as e:
+        print(f"OneSignal notification failed: {e}")
 
 # ── LIST ──────────────────────────────────────────────────────────────────────
 

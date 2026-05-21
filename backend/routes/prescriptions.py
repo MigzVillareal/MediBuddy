@@ -32,27 +32,44 @@ def parse_days(days_taken):
     }
     return mapping.get(days_taken, 'mon,tue,wed,thu,fri,sat,sun')
 
-def send_notification(onesignal_id, medication):
-    app_id  = os.getenv("ONESIGNAL_APP_ID")
-    api_key = os.getenv("ONESIGNAL_API_KEY")
-    try:
-        response = requests.post(
-            'https://onesignal.com/api/v1/notifications',
-            headers={
-                'Authorization': f'Key {api_key}',
-                'Content-Type': 'application/json',
-            },
-            json={
-                'app_id': app_id,
-                'target_channel': 'push',
-                'include_subscription_ids': [onesignal_id],
-                'contents': {'en': f'Time to take your {medication}!'},
-                'headings': {'en': 'MediBuddy Reminder'},
-            }
-        )
-        print(f"OneSignal response: {response.status_code} {response.text}")
-    except Exception as e:
-        print(f"OneSignal notification failed: {e}")
+# ── SENDER ───────────────────────────────────────────────────────────────────
+
+def send_notification(onesignal_id, medication, detail_id):
+    from models import Prescription_Detail, Prescription
+    from extensions import db
+    from run import app
+
+    with app.app_context():
+        detail = db.session.get(Prescription_Detail, detail_id)
+        if not detail or not detail.alarm_active:
+            print(f"Detail alarm inactive, skipping notification")
+            return
+
+        rx = db.session.get(Prescription, detail.prescription_id)
+        if not rx or not rx.alarm_active:
+            print(f"Prescription alarm inactive, skipping notification")
+            return
+
+        app_id  = os.getenv("ONESIGNAL_APP_ID")
+        api_key = os.getenv("ONESIGNAL_API_KEY")
+        try:
+            response = requests.post(
+                'https://onesignal.com/api/v1/notifications',
+                headers={
+                    'Authorization': f'Key {api_key}',
+                    'Content-Type': 'application/json',
+                },
+                json={
+                    'app_id': app_id,
+                    'target_channel': 'push',
+                    'include_subscription_ids': [onesignal_id],
+                    'contents': {'en': f'Time to take your {medication}!'},
+                    'headings': {'en': 'MediBuddy Reminder'},
+                }
+            )
+            print(f"OneSignal response: {response.status_code} {response.text}")
+        except Exception as e:
+            print(f"OneSignal notification failed: {e}")
 
 # ── ONESIGNAL DEBUG ───────────────────────────────────────────────────────────────────
 
@@ -88,9 +105,9 @@ def schedule_detail_jobs(detail, onesignal_id):
             send_notification, 'cron',
             day_of_week=parse_days(detail.days_taken),
             hour=hour, minute=minute,
-            args=[onesignal_id, med_name],
+            args=[onesignal_id, med_name, detail.prescription_detail_id],
             id=job_id, replace_existing=True,
-        )
+)
         job_ids.append(job_id)
     detail.alarm_active = True 
     return ','.join(job_ids)

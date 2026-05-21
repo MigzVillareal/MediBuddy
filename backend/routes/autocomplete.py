@@ -11,13 +11,10 @@ def autocomplete():
     if not q:
         return jsonify([])
 
-    like      = f"%{q}%"
-    starts    = f"{q}%"
+    words = q.split()
+    starts = f"{words[0]}%"
+    like_first = f"%{words[0]}%"
 
-    # Single query — results ordered by relevance:
-    #   rank 1 → brand_name or generic_name starts with query
-    #   rank 2 → brand_name or generic_name contains query anywhere
-    #   rank 3 → dosage_form or category contains query (fallback)
     priority = case(
         (
             db.or_(
@@ -28,24 +25,27 @@ def autocomplete():
         ),
         (
             db.or_(
-                Med_Lookup.brand_name.ilike(like),
-                Med_Lookup.generic_name.ilike(like),
+                Med_Lookup.brand_name.ilike(like_first),
+                Med_Lookup.generic_name.ilike(like_first),
             ),
             2,
         ),
         else_=3,
     )
 
+    word_filters = [
+        db.or_(
+            Med_Lookup.brand_name.ilike(f"%{w}%"),
+            Med_Lookup.generic_name.ilike(f"%{w}%"),
+            Med_Lookup.dosage_form.ilike(f"%{w}%"),
+            Med_Lookup.category.ilike(f"%{w}%"),
+        )
+        for w in words
+    ]
+
     results = (
         Med_Lookup.query
-        .filter(
-            db.or_(
-                Med_Lookup.brand_name.ilike(like),
-                Med_Lookup.generic_name.ilike(like),
-                Med_Lookup.dosage_form.ilike(like),
-                Med_Lookup.category.ilike(like),
-            )
-        )
+        .filter(db.and_(*word_filters))
         .order_by(priority)
         .limit(10)
         .all()

@@ -59,7 +59,7 @@ class Prescription(db.Model):
     date: so.Mapped[Optional[sa.Date]] = so.mapped_column(sa.Date)
     doctor: so.Mapped[Optional[str]] = so.mapped_column(sa.String(120))
     detail: so.Mapped[Optional[str]] = so.mapped_column(sa.String(256))
-    alarm_active: so.Mapped[bool] = so.mapped_column(sa.Boolean, default=True)
+    alarm_active: so.Mapped[bool] = so.mapped_column(sa.Boolean, default=False)
 
     user_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("users.user_id"))
 

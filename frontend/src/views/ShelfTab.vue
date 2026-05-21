@@ -20,7 +20,7 @@
       👁 Viewing <strong>{{ activeCircle.owner_username }}</strong>'s shelf — read only
     </div>
     <div class="edit-banner" v-else-if="!isOwn && canEdit">
-      ✏️ Editing <strong>{{ activeCircle.owner_username }}</strong>'s shelf
+      📦 Viewing <strong>{{ activeCircle.owner_username }}</strong>'s shelf — can update stock only
     </div>
 
     <h2 class="section-title">{{ isOwn ? 'My Shelf' : activeCircle.owner_username + "'s Shelf" }}</h2>

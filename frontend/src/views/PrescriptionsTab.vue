@@ -11,8 +11,7 @@
         @click="selectCircle(c); loadPrescriptions()"
       >👤 {{ c.circle_name }}</button>
     </div>
-    <div class="readonly-banner" v-if="!isOwn && !canEdit">👁 Viewing <strong>{{ activeCircle.owner_username }}</strong>’s prescriptions — read only</div>
-    <div class="edit-banner" v-else-if="!isOwn && canEdit">✏️ Editing <strong>{{ activeCircle.owner_username }}</strong>’s prescriptions</div>
+    <div class="readonly-banner" v-if="!isOwn">👁 Viewing <strong>{{ activeCircle.owner_username }}</strong>’s prescriptions — read only</div>
 
     <!-- ── HEADER ────────────────────────────────────────────── -->
     <div class="header-row">
@@ -110,7 +109,7 @@
                 </div>
                 <div class="detail-header__actions">
                   <button
-                    v-if="canEdit"
+                    v-if="isOwn"
                     class="btn-alarm btn-alarm--lg"
                     :class="activeRx.alarm_active ? 'btn-alarm--on' : 'btn-alarm--off'"
                     @click="toggleAlarm(activeRx)"
@@ -149,7 +148,7 @@
                     </span>
                   </div>
                 </div>
-                <button class="btn-remove" v-if="canEdit" @click="removeDetail(d)" title="Remove from prescription">✕</button>
+                <button class="btn-remove" v-if="isOwn" @click="removeDetail(d)" title="Remove from prescription">✕</button>
               </div>
 
               <div class="shelf-hint" v-if="rxDetails.length > 0">

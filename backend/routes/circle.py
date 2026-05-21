@@ -20,10 +20,12 @@ def get_my_circles():
         accepted = CircleMember.query.filter_by(circle_id=c.circle_id, status="accepted").all()
         pending_sent = CircleMember.query.filter_by(circle_id=c.circle_id, status="pending").all()
         result.append({
-            "circle_id": c.circle_id,
-            "circle_name": c.circle_name,
-            "member_count": len(accepted),
-            "pending_count": len(pending_sent),
+            "circle_id":         c.circle_id,
+            "circle_name":       c.circle_name,
+            "prescription_id":   c.prescription_id,
+            "prescription_name": c.prescription.name if c.prescription else None,
+            "member_count":      len(accepted),
+            "pending_count":     len(pending_sent),
         })
     return jsonify(result)
 
@@ -41,14 +43,16 @@ def get_joined_circles():
             continue          # skip circles they own (already in /mine)
         owner = db.session.get(User, circle.owner_id)
         result.append({
-            "circle_id":      circle.circle_id,
-            "circle_name":    circle.circle_name,
-            "owner_user_id":  circle.owner_id,
-            "owner_username": owner.username if owner else "Unknown",
-            "permission":     m.permission,
-            "member_count":   CircleMember.query.filter_by(
-                                  circle_id=circle.circle_id, status="accepted"
-                              ).count(),
+            "circle_id":         circle.circle_id,
+            "circle_name":       circle.circle_name,
+            "prescription_id":   circle.prescription_id,
+            "prescription_name": circle.prescription.name if circle.prescription else None,
+            "owner_user_id":     circle.owner_id,
+            "owner_username":    owner.username if owner else "Unknown",
+            "permission":        m.permission,
+            "member_count":      CircleMember.query.filter_by(
+                                     circle_id=circle.circle_id, status="accepted"
+                                 ).count(),
         })
     return jsonify(result)
 
@@ -56,33 +60,36 @@ def get_joined_circles():
 @circle_bp.route("/create", methods=["POST"])
 @login_required
 def create_circle():
-    """Create a new named circle owned by the logged-in user."""
+    """Create a new circle tied to one of the owner's prescriptions."""
     data = request.get_json()
-    name = (data.get("circle_name") or "").strip()
-    if not name:
-        return jsonify({"error": "Circle name is required."}), 400
-    circle = Circle(circle_name=name, owner_id=current_user.user_id)
+    prescription_id = data.get("prescription_id")
+    if not prescription_id:
+        return jsonify({"error": "prescription_id is required."}), 400
+
+    # Validate the prescription belongs to the current user
+    rx = db.session.get(Prescription, prescription_id)
+    if not rx:
+        return jsonify({"error": "Prescription not found."}), 404
+    if rx.user_id != current_user.user_id:
+        return jsonify({"error": "Not authorized."}), 403
+
+    # Prevent duplicate circles for the same prescription
+    existing = Circle.query.filter_by(
+        owner_id=current_user.user_id, prescription_id=prescription_id
+    ).first()
+    if existing:
+        return jsonify({"error": "A circle for this prescription already exists."}), 409
+
+    circle = Circle(owner_id=current_user.user_id, prescription_id=prescription_id)
     db.session.add(circle)
     db.session.commit()
-    return jsonify({"message": "Circle created", "circle_id": circle.circle_id, "circle_name": circle.circle_name}), 201
-
-
-@circle_bp.route("/<int:circle_id>/rename", methods=["PUT"])
-@login_required
-def rename_circle(circle_id):
-    """Rename a circle — owner only."""
-    circle = db.session.get(Circle, circle_id)
-    if not circle:
-        return jsonify({"error": "Circle not found"}), 404
-    if circle.owner_id != current_user.user_id:
-        return jsonify({"error": "Not authorized"}), 403
-    data = request.get_json()
-    name = (data.get("circle_name") or "").strip()
-    if not name:
-        return jsonify({"error": "Circle name is required."}), 400
-    circle.circle_name = name
-    db.session.commit()
-    return jsonify({"message": "Renamed", "circle_name": circle.circle_name})
+    return jsonify({
+        "message":           "Circle created",
+        "circle_id":         circle.circle_id,
+        "circle_name":       circle.circle_name,
+        "prescription_id":   circle.prescription_id,
+        "prescription_name": rx.name,
+    }), 201
 
 
 @circle_bp.route("/<int:circle_id>", methods=["DELETE"])
@@ -125,8 +132,8 @@ def get_members(circle_id):
     for m in rows:
         user = db.session.get(User, m.user_id)
         result.append({
-            "user_id": m.user_id,
-            "username": user.username if user else f"User {m.user_id}",
+            "user_id":    m.user_id,
+            "username":   user.username if user else f"User {m.user_id}",
             "permission": m.permission,
         })
     return jsonify(result)
@@ -234,11 +241,12 @@ def get_pending_invites():
         circle = db.session.get(Circle, m.circle_id)
         inviter = db.session.get(User, m.inviter_id) if m.inviter_id else None
         result.append({
-            "circle_member_id": m.circle_member_id,
-            "circle_id": m.circle_id,
-            "circle_name": circle.circle_name if circle else f"Circle {m.circle_id}",
-            "inviter_username": inviter.username if inviter else "Unknown",
-            "permission": m.permission,
+            "circle_member_id":  m.circle_member_id,
+            "circle_id":         m.circle_id,
+            "circle_name":       circle.circle_name if circle else f"Circle {m.circle_id}",
+            "prescription_name": circle.prescription.name if circle and circle.prescription else None,
+            "inviter_username":  inviter.username if inviter else "Unknown",
+            "permission":        m.permission,
         })
     return jsonify(result)
 
@@ -247,7 +255,6 @@ def get_pending_invites():
 @login_required
 def get_sent_invites():
     """Return all pending invites the current user has sent (as owner)."""
-    # Find all circles owned by the current user
     owned_ids = [c.circle_id for c in Circle.query.filter_by(owner_id=current_user.user_id).all()]
     if not owned_ids:
         return jsonify([])
@@ -263,11 +270,11 @@ def get_sent_invites():
         invitee = db.session.get(User, m.user_id)
         result.append({
             "circle_member_id": m.circle_member_id,
-            "circle_id": m.circle_id,
-            "circle_name": circle.circle_name if circle else f"Circle {m.circle_id}",
+            "circle_id":        m.circle_id,
+            "circle_name":      circle.circle_name if circle else f"Circle {m.circle_id}",
             "invitee_username": invitee.username if invitee else f"User {m.user_id}",
-            "permission": m.permission,
-            "status": m.status,
+            "permission":       m.permission,
+            "status":           m.status,
         })
     return jsonify(result)
 
@@ -298,7 +305,7 @@ def respond_invite(circle_member_id):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# CIRCLE DATA ACCESS  (member views/edits the circle owner's data)
+# CIRCLE DATA ACCESS  (member views/edits the circle owner's prescription data)
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _check_member(circle_id):
@@ -319,14 +326,25 @@ def _check_member(circle_id):
 @circle_bp.route("/<int:circle_id>/shelf", methods=["GET"])
 @login_required
 def circle_shelf(circle_id):
-    """Return the circle owner's medication shelf to an accepted member."""
+    """Return the medicines from the circle's prescription to an accepted member."""
     circle, member, err = _check_member(circle_id)
     if err:
         return err
 
-    supplies = Med_Supply.query.filter_by(user_id=circle.owner_id).all()
+    # Get only the supplies linked to this circle's prescription details
+    details = Prescription_Detail.query.filter_by(
+        prescription_id=circle.prescription_id
+    ).all()
+
     result = []
-    for s in supplies:
+    seen = set()
+    for d in details:
+        if d.supply_id is None or d.supply_id in seen:
+            continue
+        seen.add(d.supply_id)
+        s = db.session.get(Med_Supply, d.supply_id)
+        if not s or s.user_id != circle.owner_id:
+            continue
         med = db.session.get(Med_Lookup, s.lookup_id)
         result.append({
             "supply_id":       s.supply_id,
@@ -367,41 +385,38 @@ def circle_update_stock(circle_id, supply_id):
 @circle_bp.route("/<int:circle_id>/prescriptions", methods=["GET"])
 @login_required
 def circle_prescriptions(circle_id):
-    """Return the circle owner's prescriptions to an accepted member."""
+    """Return the circle's bound prescription to an accepted member."""
     circle, member, err = _check_member(circle_id)
     if err:
         return err
 
-    rxs = Prescription.query.filter_by(user_id=circle.owner_id).order_by(
-        Prescription.prescription_id.desc()
-    ).all()
-    return jsonify([
-        {
-            "prescription_id": rx.prescription_id,
-            "name":         rx.name,
-            "date":         rx.date.isoformat() if rx.date else None,
-            "doctor":       rx.doctor,
-            "detail":       rx.detail,
-            "alarm_active": rx.alarm.is_active if rx.alarm else False,
-        }
-        for rx in rxs
-    ])
+    rx = db.session.get(Prescription, circle.prescription_id)
+    if not rx:
+        return jsonify([])
+
+    return jsonify([{
+        "prescription_id": rx.prescription_id,
+        "name":         rx.name,
+        "date":         rx.date.isoformat() if rx.date else None,
+        "doctor":       rx.doctor,
+        "detail":       rx.detail,
+        "alarm_active": rx.alarm_active,
+    }])
 
 
 @circle_bp.route("/<int:circle_id>/prescriptions/<int:rx_id>/details", methods=["GET"])
 @login_required
 def circle_prescription_details(circle_id, rx_id):
-    """Return prescription details (medicines) for the circle owner's prescription."""
+    """Return prescription details (medicines) for the circle's bound prescription."""
     circle, member, err = _check_member(circle_id)
     if err:
         return err
 
     rx = db.session.get(Prescription, rx_id)
-    if not rx or rx.user_id != circle.owner_id:
+    if not rx or rx_id != circle.prescription_id:
         return jsonify({"error": "Prescription not found"}), 404
 
     details = Prescription_Detail.query.filter_by(prescription_id=rx_id).all()
-    alarm   = Alarm.query.filter_by(prescription_id=rx_id).first()
     result  = []
     for d in details:
         supply = db.session.get(Med_Supply, d.supply_id) if d.supply_id else None
@@ -417,7 +432,7 @@ def circle_prescription_details(circle_id, rx_id):
             "date_end":     d.date_end.isoformat()   if d.date_end   else None,
             "time_taken":   d.time_taken,
             "days_taken":   d.days_taken,
-            "alarm_active": alarm.is_active if alarm else False,
+            "alarm_active": rx.alarm_active,
         })
     return jsonify(result)
 
@@ -425,7 +440,7 @@ def circle_prescription_details(circle_id, rx_id):
 @circle_bp.route("/<int:circle_id>/prescriptions/<int:rx_id>/alarm", methods=["PATCH"])
 @login_required
 def circle_toggle_alarm(circle_id, rx_id):
-    """Toggle alarm for the owner's prescription — canedit only."""
+    """Toggle alarm for the owner's prescription — owner only via circle context."""
     circle, member, err = _check_member(circle_id)
     if err:
         return err
@@ -433,24 +448,18 @@ def circle_toggle_alarm(circle_id, rx_id):
         return jsonify({"error": "You only have view permission"}), 403
 
     rx = db.session.get(Prescription, rx_id)
-    if not rx or rx.user_id != circle.owner_id:
+    if not rx or rx_id != circle.prescription_id:
         return jsonify({"error": "Prescription not found"}), 404
 
-    alarm = Alarm.query.filter_by(prescription_id=rx_id).first()
-    if not alarm:
-        alarm = Alarm(is_active=False, prescription_id=rx_id)
-        db.session.add(alarm)
-        db.session.flush()
-
-    alarm.is_active = not alarm.is_active
+    rx.alarm_active = not rx.alarm_active
     db.session.commit()
-    return jsonify({"alarm_active": alarm.is_active})
+    return jsonify({"alarm_active": rx.alarm_active})
 
 
 @circle_bp.route("/<int:circle_id>/prescriptions/<int:rx_id>/details/<int:detail_id>", methods=["DELETE"])
 @login_required
 def circle_remove_detail(circle_id, rx_id, detail_id):
-    """Remove a medicine from the owner's prescription — canedit only."""
+    """Remove a medicine from the owner's prescription — owner only."""
     circle, member, err = _check_member(circle_id)
     if err:
         return err
@@ -458,7 +467,7 @@ def circle_remove_detail(circle_id, rx_id, detail_id):
         return jsonify({"error": "You only have view permission"}), 403
 
     rx = db.session.get(Prescription, rx_id)
-    if not rx or rx.user_id != circle.owner_id:
+    if not rx or rx_id != circle.prescription_id:
         return jsonify({"error": "Prescription not found"}), 404
 
     detail = db.session.get(Prescription_Detail, detail_id)

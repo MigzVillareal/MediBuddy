@@ -160,12 +160,9 @@ def delete_prescription(prescription_id):
     if rx.user_id != current_user.user_id:
         return jsonify({"error": "Not authorized"}), 403
 
-    details = Prescription_Detail.query.filter_by(prescription_id=prescription_id).all()
-
-    for d in details:
+    for d in rx.prescription_details:
         cancel_detail_jobs(d)
 
-    Prescription_Detail.query.filter_by(prescription_id=prescription_id).delete()
     db.session.delete(rx)
     db.session.commit()
     return jsonify({"message": "Prescription deleted"})

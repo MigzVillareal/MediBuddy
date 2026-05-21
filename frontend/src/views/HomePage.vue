@@ -171,16 +171,23 @@ async function loadDueMeds() {
 async function takeMed(med) {
   if (med._loading) return
   med._loading = true
+
+  const previousStock = med.supply_stock
+  if (med.supply_stock != null) {
+    med.supply_stock -= 1  // optimistic update
+  }
+
   try {
     const res = await api.post(
       `/prescriptions/${med.prescription_id}/details/${med.prescription_detail_id}/take`
     )
     med._status = 'taken'
-    // Update stock reactively
+    // Sync with server's actual value
     if (res.data.supply_stock != null) {
       med.supply_stock = res.data.supply_stock
     }
   } catch (e) {
+    med.supply_stock = previousStock  // revert on failure
     const msg = e.response?.data?.error || 'Failed to record.'
     alert(msg)
   } finally {

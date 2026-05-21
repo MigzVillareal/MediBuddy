@@ -11,7 +11,15 @@ export const canEdit = computed(() =>
 )
 
 export async function loadCircles() {
-  try { circles.value = (await api.get('/circle/joined')).data }
+  try {
+    circles.value = (await api.get('/circle/joined')).data
+    if (activeCircle.value) {
+      const still_exists = circles.value.find(
+        c => c.circle_id === activeCircle.value.circle_id
+      )
+      if (!still_exists) activeCircle.value = null
+    }
+  }
   catch { circles.value = [] }
 }
 

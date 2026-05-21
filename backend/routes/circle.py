@@ -309,15 +309,20 @@ def respond_invite(circle_member_id):
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _check_member(circle_id):
-    """Return (circle, member_row) or raise a jsonify error tuple."""
     circle = db.session.get(Circle, circle_id)
     if not circle:
         return None, None, (jsonify({"error": "Circle not found"}), 404)
+
+    # Owner always has full access
+    if circle.owner_id == current_user.user_id:
+        return circle, None, None
+
     member = CircleMember.query.filter_by(
         circle_id=circle_id, user_id=current_user.user_id, status="accepted"
     ).first()
     if not member:
         return None, None, (jsonify({"error": "Not authorized"}), 403)
+
     return circle, member, None
 
 
@@ -367,7 +372,8 @@ def circle_update_stock(circle_id, supply_id):
     circle, member, err = _check_member(circle_id)
     if err:
         return err
-    if member.permission != "canedit":
+    is_owner = circle.owner_id == current_user.user_id
+    if not is_owner and member.permission != "canedit":
         return jsonify({"error": "You only have view permission"}), 403
 
     supply = db.session.get(Med_Supply, supply_id)
@@ -444,7 +450,8 @@ def circle_toggle_alarm(circle_id, rx_id):
     circle, member, err = _check_member(circle_id)
     if err:
         return err
-    if member.permission != "canedit":
+    is_owner = circle.owner_id == current_user.user_id
+    if not is_owner and member.permission != "canedit":
         return jsonify({"error": "You only have view permission"}), 403
 
     rx = db.session.get(Prescription, rx_id)
@@ -463,7 +470,8 @@ def circle_remove_detail(circle_id, rx_id, detail_id):
     circle, member, err = _check_member(circle_id)
     if err:
         return err
-    if member.permission != "canedit":
+    is_owner = circle.owner_id == current_user.user_id
+    if not is_owner and member.permission != "canedit":
         return jsonify({"error": "You only have view permission"}), 403
 
     rx = db.session.get(Prescription, rx_id)

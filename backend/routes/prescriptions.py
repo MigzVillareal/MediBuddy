@@ -92,10 +92,10 @@ def schedule_detail_jobs(detail, onesignal_id):
             id=job_id, replace_existing=True,
         )
         job_ids.append(job_id)
+    detail.alarm_active = True 
     return ','.join(job_ids)
 
 def cancel_detail_jobs(detail):
-    """Remove all scheduled jobs for a detail and clear its references."""
     if detail.job_reference:
         for job_id in detail.job_reference.split(','):
             try:
@@ -104,6 +104,7 @@ def cancel_detail_jobs(detail):
                 pass
     detail.job_reference = None
     detail.onesignal_id  = None
+    detail.alarm_active  = False
 
 # ── LIST ──────────────────────────────────────────────────────────────────────
 
@@ -176,30 +177,9 @@ def toggle_prescription_alarm(prescription_id):
     if not rx or rx.user_id != current_user.user_id:
         return jsonify({"error": "Not authorized"}), 403
 
-    details     = Prescription_Detail.query.filter_by(prescription_id=prescription_id).all()
-    any_active  = any(bool(d.job_reference) for d in details)
-
-    if any_active:
-        # Turn ALL detail alarms off
-        for d in details:
-            cancel_detail_jobs(d)
-        db.session.commit()
-        return jsonify({"alarm_active": False})
-    else:
-        # Turn ALL detail alarms on — need onesignal_id from client
-        data         = request.get_json() or {}
-        onesignal_id = data.get("onesignal_id")
-        if not onesignal_id:
-            return jsonify({"error": "onesignal_id required"}), 400
-
-        for d in details:
-            if not d.time_taken:
-                continue
-            d.onesignal_id  = onesignal_id
-            d.job_reference = schedule_detail_jobs(d, onesignal_id)
-
-        db.session.commit()
-        return jsonify({"alarm_active": True})
+    rx.alarm_active = not rx.alarm_active
+    db.session.commit()
+    return jsonify({"alarm_active": rx.alarm_active})
 
 # ── LIST DETAILS ──────────────────────────────────────────────────────────────
 

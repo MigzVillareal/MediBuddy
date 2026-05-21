@@ -11,8 +11,6 @@
 </template>
 
 <script setup>
-// With script setup, just importing a component registers it automatically.
-// No need for a components: {} block.
 import LoginCard from '../components/LoginCard.vue'
 </script>
 

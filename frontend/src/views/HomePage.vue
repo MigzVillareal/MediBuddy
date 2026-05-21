@@ -3,6 +3,7 @@
     <header class="top-bar">
       <span class="top-bar__logo">💊</span>
       <span class="top-bar__name">MediBuddy</span>
+      <span class="top-bar__user">{{ user.username }}</span>
     </header>
 
     <main class="content">
@@ -34,11 +35,19 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import ShelfTab          from './ShelfTab.vue'
 import PrescriptionsTab  from './PrescriptionsTab.vue'
 import CircleTab         from './CircleTab.vue'
 import ProfileTab        from './ProfileTab.vue'
+
+const user = ref({username: ''})
+
+onMounted(async () => {
+  const res = await fetch("/api/auth/me")
+  const data = await res.json()
+  user.value.username = data.username
+})
 
 // Tracks which tab is currently visible
 const activeTab = ref('home')
@@ -66,6 +75,7 @@ const activeTab = ref('home')
 }
 .top-bar__logo { font-size: 24px; }
 .top-bar__name { font-size: 20px; font-weight: 800; color: var(--color-text-dark); font-family: var(--font-main); }
+.top-bar__user { margin-left: auto; font-size: 16px; font-weight: 600; color: var(--color-text-muted); }
 .content { flex: 1; overflow-y: auto; }
 .bottom-nav {
   position: fixed;

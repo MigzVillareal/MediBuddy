@@ -1,10 +1,10 @@
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from extensions import db
-from models import Prescription, Prescription_Detail, Med_Lookup
 from apscheduler.schedulers.background import BackgroundScheduler
 import requests
 import os
+from models import Prescription, Prescription_Detail, Med_Supply
 
 prescriptions_bp = Blueprint("prescriptions", __name__)
 
@@ -31,17 +31,25 @@ def parse_days(days_taken):
     }
     return mapping.get(days_taken, 'mon,tue,wed,thu,fri,sat,sun')
 
-def send_notification(onesignal_id, medication):
-    requests.post(
-        'https://onesignal.com/api/v1/notifications',
-        headers={'Authorization': f'Basic {ONESIGNAL_API_KEY}'},
-        json={
-            'app_id': ONESIGNAL_APP_ID,
-            'include_subscription_ids': [onesignal_id],
-            'contents': {'en': f'Time to take your {medication}!'},
-            'headings': {'en': 'MediBuddy Reminder'},
-        }
-    )
+# def send_notification(onesignal_id, medication):
+#     try:
+#         response = requests.post(
+#             'https://onesignal.com/api/v1/notifications',
+#             headers={
+#                 'Authorization': f'Basic {ONESIGNAL_API_KEY}',
+#                 'Content-Type': 'application/json',
+#             },
+#             json={
+#                 'app_id': ONESIGNAL_APP_ID,
+#                 'target_channel': 'push',
+#                 'include_aliases': {'onesignal_id': [onesignal_id]},
+#                 'contents': {'en': f'Time to take your {medication}!'},
+#                 'headings': {'en': 'MediBuddy Reminder'},
+#             }
+#         )
+#         print(f"OneSignal response: {response.status_code} {response.text}")
+#     except Exception as e:
+#         print(f"OneSignal notification failed: {e}")
 
 # ── LIST ──────────────────────────────────────────────────────────────────────
 
@@ -124,10 +132,11 @@ def list_details(prescription_id):
     details = Prescription_Detail.query.filter_by(prescription_id=prescription_id).all()
     result = []
     for d in details:
-        med = db.session.get(Med_Lookup, d.lookup_id)
+        supply = db.session.get(Med_Supply, d.supply_id)
+        med = supply.medicine if supply else None
         result.append({
             "prescription_detail_id": d.prescription_detail_id,
-            "lookup_id":    d.lookup_id,
+            "supply_id":    d.supply_id,
             "brand_name":   med.brand_name   if med else None,
             "generic_name": med.generic_name if med else None,
             "dosage_form":  med.dosage_form  if med else None,
@@ -135,7 +144,6 @@ def list_details(prescription_id):
             "date_end":     d.date_end.isoformat()   if d.date_end   else None,
             "time_taken":   d.time_taken,
             "days_taken":   d.days_taken,
-            "alarm_active": d.is_active,
             "onesignal_id": d.onesignal_id,
         })
     return jsonify(result)
@@ -154,7 +162,7 @@ def add_detail(prescription_id):
 
     data = request.get_json()
 
-    lookup_id = data.get("lookup_id")
+    supply_id = data.get("supply_id")
     # if not lookup_id or not db.session.get(Med_Lookup, lookup_id):
     #     return jsonify({"error": "Invalid medicine selected."}), 400
 
@@ -176,17 +184,17 @@ def add_detail(prescription_id):
         time_taken=time_taken,
         days_taken=days_taken,
         prescription_id=prescription_id,
-        # lookup_id=lookup_id,
+        supply_id=supply_id,
         onesignal_id=onesignal_id,
-        is_active=bool(onesignal_id),
+        # is_active=bool(onesignal_id),
     )
     db.session.add(detail)
     db.session.flush()
 
     # Schedule a job for each time if onesignal_id is present
     if onesignal_id:
-        med = db.session.get(Med_Lookup, lookup_id)
-        med_name = med.brand_name if med else 'your medicine'
+        supply = db.session.get(Med_Supply, supply_id)
+        med_name = supply.medicine.brand_name if supply and supply.medicine else 'your medicine'
         job_ids = []
         for time_str in time_taken.split(','):
             hour, minute = map(int, time_str.strip().split(':'))

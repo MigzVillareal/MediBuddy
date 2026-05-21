@@ -362,7 +362,7 @@ async function addDetail() {
   isAddingDetail.value = true
   try {
     await api.post(`/prescriptions/${activeRx.value.prescription_id}/details`, {
-      lookup_id:    chosenMed.value.lookup_id,
+      supply_id:    chosenMed.value.supply_id,
       date_start:   detailForm.date_start,
       date_end:     detailForm.date_end || null,
       time_taken:   detailForm.times.join(','),

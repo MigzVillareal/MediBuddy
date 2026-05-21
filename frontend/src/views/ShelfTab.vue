@@ -253,6 +253,7 @@ async function changeStock(med, delta) {
 
 // ── Delete ──────────────────────────────────────────────────────
 async function deleteMed(med) {
+  if (!confirm(`Remove ${med.brand_name} from your shelf?`)) return
   medications.value = medications.value.filter(m => m.supply_id !== med.supply_id)
   try { await api.delete(`/meds/drug_stock/${med.supply_id}`) }
   catch (err) { medications.value.push(med); console.error(err) }

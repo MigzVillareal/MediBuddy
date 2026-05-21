@@ -132,7 +132,7 @@ def list_details(prescription_id):
     details = Prescription_Detail.query.filter_by(prescription_id=prescription_id).all()
     result = []
     for d in details:
-        supply = db.session.get(Med_Supply, d.supply_id)
+        supply = db.session.get(Med_Supply, d.supply_id) if d.supply_id else None
         med = supply.medicine if supply else None
         result.append({
             "prescription_detail_id": d.prescription_detail_id,

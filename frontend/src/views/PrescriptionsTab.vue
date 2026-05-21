@@ -39,7 +39,7 @@
         <div class="rx-card__body">
           <p class="rx-card__name">{{ rx.name }}</p>
           <p class="rx-card__meta">
-            <span v-if="rx.doctor">Dr. {{ rx.doctor }}</span>
+            <span v-if="rx.doctor"> {{ rx.doctor }}</span>
             <span v-if="rx.doctor && rx.date"> · </span>
             <span v-if="rx.date">{{ formatDate(rx.date) }}</span>
           </p>

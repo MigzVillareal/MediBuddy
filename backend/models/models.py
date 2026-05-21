@@ -119,7 +119,7 @@ class Med_Supply(db.Model):
     # relationships
     medicine: so.Mapped["Med_Lookup"] = so.relationship("Med_Lookup")
     user: so.Mapped["User"] = so.relationship("User", back_populates="med_supplies")
-    prescription_details: so.Mapped[list["Prescription_Detail"]] = so.relationship("Prescription_Detail", back_populates="supply")
+    prescription_details: so.Mapped[list["Prescription_Detail"]] = so.relationship("Prescription_Detail", back_populates="supply", cascade="all, delete-orphan")
 
     @property
     def intakes_left(self):

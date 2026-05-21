@@ -11,7 +11,7 @@
         @click="selectCircle(c); loadPrescriptions()"
       >👤 {{ c.circle_name }}</button>
     </div>
-    <div class="readonly-banner" v-if="!isOwn">👁 Viewing <strong>{{ activeCircle.owner_username }}</strong>’s prescriptions — read only</div>
+    <div class="readonly-banner" v-if="!isOwn">👁 Viewing <strong>{{ activeCircle.owner_username }}</strong>'s prescriptions — read only</div>
 
     <!-- ── HEADER ────────────────────────────────────────────── -->
     <div class="header-row">
@@ -45,15 +45,6 @@
           </p>
           <p class="rx-card__meta" v-if="rx.detail">{{ rx.detail }}</p>
         </div>
-        <!-- Alarm toggle — stops propagation so it doesn't open the detail -->
-        <button
-          class="btn-alarm"
-          :class="rx.alarm_active ? 'btn-alarm--on' : 'btn-alarm--off'"
-          :title="rx.alarm_active ? 'Notifications on — tap to disable' : 'Notifications off — tap to enable'"
-          @click.stop="toggleAlarm(rx)"
-        >
-          {{ rx.alarm_active ? '🔔' : '🔕' }}
-        </button>
         <span class="rx-card__arrow">›</span>
       </div>
     </div>
@@ -112,7 +103,7 @@
                     v-if="isOwn"
                     class="btn-alarm btn-alarm--lg"
                     :class="activeRx.alarm_active ? 'btn-alarm--on' : 'btn-alarm--off'"
-                    @click="toggleAlarm(activeRx)"
+                    @click="toggleRxAlarm(activeRx)"
                     :title="activeRx.alarm_active ? 'Disable notifications' : 'Enable notifications'"
                   >{{ activeRx.alarm_active ? '🔔' : '🔕' }}</button>
                   <button class="btn-del-rx" v-if="isOwn" @click="deleteRx" title="Delete prescription">🗑</button>
@@ -133,22 +124,32 @@
               <div class="med-row" v-for="d in rxDetails" :key="d.prescription_detail_id">
                 <div class="med-row__info">
                   <div class="med-row__name-row">
-                    <p class="med-row__name">{{ d.brand_name }}</p>
-                    <span class="stock-badge" :class="{ 'stock-badge--low': d.supply_stock !== null && d.supply_stock <= 5 }">
-                      {{ d.supply_stock !== null ? d.supply_stock + ' left' : 'N/A' }}
-                    </span>
+                    <span class="med-row__name">{{ d.brand_name }}</span>
+                    <span
+                      class="stock-badge"
+                      :class="{ 'stock-badge--low': d.quantity != null && d.quantity <= 5 }"
+                      v-if="d.quantity != null"
+                    >{{ d.quantity }} left</span>
                   </div>
-                  <p class="med-row__generic">{{ d.generic_name }} · {{ d.dosage_form }}</p>
+                  <p class="med-row__generic" v-if="d.generic_name">{{ d.generic_name }}</p>
                   <div class="sched-chips">
-                    <span class="chip chip--blue">📅 {{ formatDate(d.date_start) }}<template v-if="d.date_end"> → {{ formatDate(d.date_end) }}</template></span>
-                    <span class="chip chip--green">⏰ {{ d.time_taken }}</span>
-                    <span class="chip chip--purple">{{ d.days_taken }}</span>
-                    <span class="chip" :class="d.alarm_active ? 'chip--on' : 'chip--off'">
-                      🔔 {{ d.alarm_active ? 'Alarm on' : 'Alarm off' }}
-                    </span>
+                    <span class="chip chip--blue" v-if="d.days_taken">{{ d.days_taken }}</span>
+                    <span
+                      class="chip chip--purple"
+                      v-for="t in (d.time_taken ? d.time_taken.split(',') : [])"
+                      :key="t"
+                    >{{ t.trim() }}</span>
+                    <span class="chip chip--green" v-if="d.date_start">From {{ formatDate(d.date_start) }}</span>
+                    <span class="chip" v-if="d.date_end">Until {{ formatDate(d.date_end) }}</span>
                   </div>
                 </div>
-                <button class="btn-remove" v-if="isOwn" @click="removeDetail(d)" title="Remove from prescription">✕</button>
+                <button
+                  class="btn-alarm"
+                  :class="d.alarm_active ? 'btn-alarm--on' : 'btn-alarm--off'"
+                  @click="toggleDetailAlarm(d)"
+                  :title="d.alarm_active ? 'Disable alarm' : 'Enable alarm'"
+                >{{ d.alarm_active ? '🔔' : '🔕' }}</button>
+                <button class="btn-remove" v-if="isOwn" @click="removeDetail(d)">✕</button>
               </div>
 
               <div class="shelf-hint" v-if="rxDetails.length > 0">
@@ -168,7 +169,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import api from '@/api'
-import { circles, activeCircle, isOwn, canEdit, loadCircles, selectCircle, selectOwn } from '@/composables/useCircleContext'
+import { circles, activeCircle, isOwn, loadCircles, selectCircle, selectOwn } from '@/composables/useCircleContext'
 
 // ── STATE ──────────────────────────────────────────────────────────────────────
 const prescriptions   = ref([])
@@ -200,8 +201,7 @@ async function loadPrescriptions() {
       ? `/circle/${activeCircle.value.circle_id}/prescriptions`
       : '/prescriptions/'
     prescriptions.value = (await api.get(url)).data
-  }
-  catch (e) { console.error(e) }
+  } catch (e) { console.error(e) }
   finally { loading.value = false }
 }
 
@@ -230,29 +230,54 @@ async function createRx() {
   } finally { isCreating.value = false }
 }
 
-// ── ALARM TOGGLE ───────────────────────────────────────────────────────────────
-async function toggleAlarm(rx) {
+// ── ALARM TOGGLES ──────────────────────────────────────────────────────────────
+
+// Toggle alarm on the prescription itself (header bell)
+async function toggleRxAlarm(rx) {
   const prev = rx.alarm_active
   rx.alarm_active = !prev
   try {
-    const url = activeCircle.value
-      ? `/circle/${activeCircle.value.circle_id}/prescriptions/${rx.prescription_id}/alarm`
-      : `/prescriptions/${rx.prescription_id}/alarm`
-    const res = await api.patch(url)
-    rx.alarm_active = res.data.alarm_active
-    if (activeRx.value?.prescription_id === rx.prescription_id) {
-      activeRx.value.alarm_active = rx.alarm_active
-      rxDetails.value.forEach(d => d.alarm_active = rx.alarm_active)
+    let onesignal_id = null
+    if (!prev) {
+      try {
+        await window.OneSignal.Notifications.requestPermission()
+        onesignal_id = window.OneSignal.User.PushSubscription.id
+      } catch (e) { console.warn('OneSignal not available:', e) }
     }
+    const res = await api.patch(`/prescriptions/${rx.prescription_id}/alarm`, { onesignal_id })
+    rx.alarm_active = res.data.alarm_active
   } catch (e) {
     rx.alarm_active = prev
-    console.error('Failed to toggle alarm:', e)
+    console.error('Failed to toggle prescription alarm:', e)
+  }
+}
+
+// Toggle alarm on a prescription detail (individual medicine row)
+async function toggleDetailAlarm(d) {
+  const prev = d.alarm_active
+  d.alarm_active = !prev
+  try {
+    let onesignal_id = null
+    if (!prev) {
+      try {
+        await window.OneSignal.Notifications.requestPermission()
+        onesignal_id = window.OneSignal.User.PushSubscription.id
+      } catch (e) { console.warn('OneSignal not available:', e) }
+    }
+    const res = await api.patch(
+      `/prescriptions/${activeRx.value.prescription_id}/details/${d.prescription_detail_id}/alarm`,
+      { onesignal_id }
+    )
+    d.alarm_active = res.data.alarm_active
+  } catch (e) {
+    d.alarm_active = prev
+    console.error('Failed to toggle detail alarm:', e)
   }
 }
 
 // ── DETAIL ─────────────────────────────────────────────────────────────────────
 async function openDetail(rx) {
-  activeRx.value  = rx
+  activeRx.value    = rx
   detailError.value = ''
   await loadDetails()
 }
@@ -293,90 +318,6 @@ async function removeDetail(d) {
     await loadDetails()
   } catch (e) { detailError.value = e.response?.data?.error || 'Remove failed.' }
 }
-
-// ── ADD MEDICINE ───────────────────────────────────────────────
-function openAddMed() {
-  resetAddForm()
-  showAddMed.value = true
-}
-
-function searchMed() {
-  clearTimeout(searchTimeout)
-  chosenMed.value = null
-  if (!medSearch.value.trim()) { medResults.value = []; return }
-  searchTimeout = setTimeout(async () => {
-    try {
-      medResults.value = (await api.get('/autocomplete/', { params: { q: medSearch.value.trim() } })).data
-      // scroll results into view on mobile
-      await nextTick()
-      searchResultsEl.value?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-    } catch (e) { medResults.value = [] }
-  }, 200)
-}
-
-function pickMed(m) {
-  chosenMed.value = m
-  medResults.value = []
-}
-
-function clearMed() {
-  chosenMed.value = null
-  medSearch.value = ''
-  medResults.value = []
-}
-
-function addTime() {
-  const t = timeInput.value.trim()
-  if (t && !detailForm.times.includes(t)) detailForm.times.push(t)
-  timeInput.value = ''
-}
-
-function removeTime(i) {
-  detailForm.times.splice(i, 1)
-}
-
-function resetAddForm() {
-  medSearch.value = ''
-  medResults.value = []
-  chosenMed.value = null
-  timeInput.value = ''
-  Object.assign(detailForm, { date_start: '', date_end: '', times: [], days_taken: 'daily' })
-  addError.value = ''
-}
-
-async function addDetail() {
-  addError.value = ''
-  if (!chosenMed.value)              { addError.value = 'Please select a medicine.'; return }
-  if (!detailForm.date_start)        { addError.value = 'Start date is required.'; return }
-  if (detailForm.times.length === 0) { addError.value = 'Add at least one time.'; return }
-
-  // Get OneSignal subscription ID
-  let onesignal_id = null
-  try {
-    await window.OneSignal.Notifications.requestPermission()
-    onesignal_id = await window.OneSignal.User.PushSubscription.id
-  } catch (e) {
-    console.warn('OneSignal not available:', e)
-  }
-
-  isAddingDetail.value = true
-  try {
-    await api.post(`/prescriptions/${activeRx.value.prescription_id}/details`, {
-      supply_id:    chosenMed.value.supply_id,
-      date_start:   detailForm.date_start,
-      date_end:     detailForm.date_end || null,
-      time_taken:   detailForm.times.join(','),
-      days_taken:   detailForm.days_taken,
-      onesignal_id: onesignal_id,   // new
-    })
-    showAddMed.value = false
-    resetAddForm()
-    await loadDetails()
-    await loadPrescriptions()
-  } catch (e) {
-    addError.value = e.response?.data?.error || 'Failed to add medicine.'
-  } finally { isAddingDetail.value = false }
-}
 </script>
 
 <style scoped>
@@ -389,7 +330,6 @@ async function addDetail() {
 .ctx-btn--active { background:var(--color-primary); border-color:var(--color-primary); color:#fff; }
 .ctx-btn:hover:not(.ctx-btn--active) { border-color:var(--color-primary); color:var(--color-primary); }
 .readonly-banner { background:#fef9c3; border:1.5px solid #fde68a; border-radius:10px; padding:9px 14px; font-size:13px; color:#92400e; margin-bottom:12px; }
-.edit-banner     { background:#dcfce7; border:1.5px solid #86efac; border-radius:10px; padding:9px 14px; font-size:13px; color:#166534; margin-bottom:12px; }
 
 /* header */
 .header-row { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:18px; }
@@ -482,8 +422,6 @@ async function addDetail() {
 .chip--blue   { background:#e0f2fe; color:#0369a1; }
 .chip--green  { background:#dcfce7; color:#15803d; }
 .chip--purple { background:#ede9fe; color:#7c3aed; }
-.chip--on     { background:#dcfce7; color:#15803d; }
-.chip--off    { background:#fee2e2; color:#b91c1c; }
 
 /* remove button */
 .btn-remove { width:28px; height:28px; border-radius:50%; border:none; background:#fee2e2; color:#ef4444; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .2s; flex-shrink:0; margin-top:2px; }

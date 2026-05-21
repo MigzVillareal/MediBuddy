@@ -6,6 +6,7 @@ from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 import requests
 import os
 from models import Prescription, Prescription_Detail, Med_Supply
+from datetime import date
 
 prescriptions_bp = Blueprint("prescriptions", __name__)
 
@@ -325,3 +326,79 @@ def remove_detail(prescription_id, detail_id):
     db.session.delete(detail)
     db.session.commit()
     return jsonify({"message": "Medicine and alarm removed"})
+
+# ───────────────────────── DUE TODAY ─────────────────────────────────────────────
+
+
+@prescriptions_bp.route("/due-today", methods=["GET"])
+@login_required
+def due_today():
+    today    = date.today()
+    day_name = today.strftime('%a').lower()  # 'mon', 'tue', etc.
+
+    # Which schedules include today
+    day_map = {
+        'mon': ['daily', 'MWF', 'MTWTHF'],
+        'tue': ['daily', 'TTS', 'MTWTHF'],
+        'wed': ['daily', 'MWF', 'MTWTHF'],
+        'thu': ['daily', 'TTS', 'MTWTHF'],
+        'fri': ['daily', 'MWF', 'MTWTHF'],
+        'sat': ['daily', 'TTS', 'SS'],
+        'sun': ['daily', 'SS'],
+    }
+    valid_schedules = day_map.get(day_name, ['daily'])
+
+    details = (
+        Prescription_Detail.query
+        .join(Prescription)
+        .filter(
+            Prescription.user_id == current_user.user_id,
+            Prescription.alarm_active == True,
+            Prescription_Detail.alarm_active == True,
+            Prescription_Detail.date_start <= today,
+            db.or_(
+                Prescription_Detail.date_end == None,
+                Prescription_Detail.date_end >= today,
+            ),
+            Prescription_Detail.days_taken.in_(valid_schedules),
+        )
+        .all()
+    )
+
+    result = []
+    for d in details:
+        supply = d.supply
+        med    = supply.medicine if supply else None
+        result.append({
+            "prescription_detail_id": d.prescription_detail_id,
+            "prescription_id":        d.prescription_id,
+            "brand_name":    med.brand_name    if med else None,
+            "generic_name":  med.generic_name  if med else None,
+            "dosage_form":   med.dosage_form   if med else None,
+            "time_taken":    d.time_taken,
+            "days_taken":    d.days_taken,
+            "supply_id":     d.supply_id,
+            "supply_stock":  supply.supply_stock if supply else None,
+        })
+    return jsonify(result)
+
+@prescriptions_bp.route("/<int:prescription_id>/details/<int:detail_id>/take", methods=["POST"])
+@login_required
+def take_medication(prescription_id, detail_id):
+    rx = db.session.get(Prescription, prescription_id)
+    if not rx or rx.user_id != current_user.user_id:
+        return jsonify({"error": "Not authorized"}), 403
+
+    detail = db.session.get(Prescription_Detail, detail_id)
+    if not detail or detail.prescription_id != prescription_id:
+        return jsonify({"error": "Not found"}), 404
+
+    supply = db.session.get(Med_Supply, detail.supply_id) if detail.supply_id else None
+    if supply:
+        if supply.supply_stock <= 0:
+            return jsonify({"error": "No stock remaining."}), 400
+        supply.supply_stock -= 1
+        db.session.commit()
+        return jsonify({"message": "Taken", "supply_stock": supply.supply_stock})
+
+    return jsonify({"message": "Taken"}), 200

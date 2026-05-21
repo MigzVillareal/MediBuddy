@@ -6,7 +6,7 @@
       <div class="top-bar__right">
         <!-- Due-today trigger -->
         <button
-          v-if="dueMeds.length > 0"
+          v-if="pendingCount > 0"
           class="due-pill"
           @click="showDueSheet = true"
           title="Medicines due today"

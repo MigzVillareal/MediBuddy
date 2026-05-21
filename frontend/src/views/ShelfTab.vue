@@ -66,32 +66,11 @@
       <router-link to="/medicine-search" class="btn-add">+ Add Medicine</router-link>
     </div>
 
-    <!-- ── NUMPAD SHEET ── -->
-    <Teleport to="body">
-      <Transition name="fade">
-        <div class="overlay" v-if="numpadTarget" @click.self="closeNumpad">
-          <Transition name="slide-up">
-            <div class="numpad-sheet" v-if="numpadTarget">
-              <div class="sheet-handle"></div>
-              <p class="numpad-label">{{ numpadTarget.brand_name }}</p>
-              <p class="numpad-sub">Set stock quantity</p>
-              <div class="numpad-display" :class="{ 'numpad-display--low': numpadDisplay !== '0' && +numpadDisplay <= 5 }">
-                <span class="numpad-value">{{ numpadDisplay }}</span>
-                <span class="numpad-unit">pcs</span>
-              </div>
-              <div class="numpad-grid">
-                <button class="numpad-key" v-for="key in numKeys" :key="key" @click="pressKey(key)">{{ key }}</button>
-                <button class="numpad-key numpad-key--action" @click="pressKey('C')">C</button>
-                <button class="numpad-key" @click="pressKey('0')">0</button>
-                <button class="numpad-key numpad-key--action" @click="pressKey('⌫')">⌫</button>
-              </div>
-              <button class="numpad-confirm" @click="confirmNumpad">✓ &nbsp; Set to {{ numpadDisplay }} pcs</button>
-              <button class="numpad-cancel" @click="closeNumpad">Cancel</button>
-            </div>
-          </Transition>
-        </div>
-      </Transition>
-    </Teleport>
+    <NumpadSheet
+      :target="numpadTarget"
+      @confirm="val => confirmNumpad(val)"
+      @close="closeNumpad"
+    />
 
     <!-- ── RX PICKER SHEET ── -->
     <Teleport to="body">
@@ -195,6 +174,7 @@
 import { ref, computed, reactive, onMounted, watch } from 'vue'
 import api from '@/api'
 import { circles, activeCircle, isOwn, canEdit, loadCircles, selectCircle, selectOwn } from '@/composables/useCircleContext'
+import NumpadSheet from '@/components/NumpadSheet.vue'
 
 const medications = ref([])
 const loading     = ref(true)
@@ -214,19 +194,13 @@ function pressKey(key) {
   if (numpadRaw.value === '' && key === '0') return
   numpadRaw.value += key
 }
-async function confirmNumpad() {
+async function confirmNumpad(newQty) {
   const med = numpadTarget.value
-  const newQty = Math.max(0, parseInt(numpadDisplay.value, 10) || 0)
   const prev = med.supply_stock
   med.supply_stock = newQty
   closeNumpad()
-  try {
-    if (activeCircle.value) {
-      await api.patch(`/circle/${activeCircle.value.circle_id}/shelf/${med.supply_id}`, { supply_stock: newQty })
-    } else {
-      await api.patch(`/meds/drug_stock/${med.supply_id}`, { supply_stock: newQty })
-    }
-  } catch (err) { med.supply_stock = prev; console.error(err) }
+  try { await api.patch(`/meds/drug_stock/${med.supply_id}`, { supply_stock: newQty }) }
+  catch (err) { med.supply_stock = prev }
 }
 function truncateAtBracket(str) {
   if (!str) return ''
